@@ -50,9 +50,6 @@ local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " "
 default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
 
 echo "Creating VPN kill switch and local routes."
-iptables -P INPUT DROP
-iptables -P OUTPUT DROP
-iptables -P FORWARD DROP
 
 # allows established and related connections
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -80,14 +77,15 @@ remote_port=$(grep "port " $config_file | cut -d " " -f 2)
 remote_proto=$(grep "proto " $config_file | cut -d " " -f 2 | cut -c1-3)
 remotes=$(grep "remote " $config_file | cut -d " " -f 2-4)
 
-while IFS= read line; do
-    domain=$(echo "$line" | cut -d " " -f 2)
-    port=$(echo "$line" | cut -d " " -f 3)
-    proto=$(echo "$line" | cut -d " " -f 4 | cut -c1-3)
+echo "$remotes" | while IFS= read line; do
+    domain=$(echo "$line" | cut -d " " -f 1)
+    port=$(echo "$line" | cut -d " " -f 2)
+    proto=$(echo "$line" | cut -d " " -f 3 | cut -c1-3)
     for ip in $(nslookup $domain localhost | tail -n +4 | grep -Eo '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' | sort | uniq); do
+        echo $domain $ip $port $proto
         iptables -A OUTPUT -o eth0 -d $ip -p ${proto:-$remote_proto} --dport ${port:-$remote_port} -j ACCEPT
     done
-done <<< "$remotes"
+done
 
 # allow connections over VPN interface...
 iptables -A INPUT -i tun0 -j ACCEPT
@@ -103,6 +101,10 @@ if [ ! -z $FORWARDED_PORTS ]; then
         iptables -A INPUT -i tun0 -p udp --dport $port -j ACCEPT
     done
 fi
+
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
 
 echo "[INFO] iptables rules created and routes configured."
 
