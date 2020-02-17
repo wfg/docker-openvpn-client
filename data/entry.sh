@@ -23,6 +23,7 @@ echo "Using OpenVPN log level: $LOG_LEVEL"
 
 echo -e "\n---- OpenVPN and Tinyproxy ----"
 
+# These configuration file changes are required by Alpine.
 echo "Making changes to the configuration file."
 sed -i \
     -e '/up /c up \/etc\/openvpn\/up.sh' \
@@ -110,8 +111,10 @@ echo "[INFO] iptables rules created and routes configured."
 
 ################################################################################
 
-{
-    if [ "$TINYPROXY" = "on" ]; then
+if [ "$TINYPROXY" = "on" ]; then
+    # start list of commands to run Tinyproxy
+    # https://www.gnu.org/software/bash/manual/html_node/Command-Grouping.html
+    {
         echo "[INFO] Running tinyproxy"
         # Wait for VPN connection to be established
         while ! ping -c 1 1.1.1.1 > /dev/null 2&>1; do
@@ -137,9 +140,9 @@ echo "[INFO] iptables rules created and routes configured."
         fi
 
         tinyproxy -c /etc/tinyproxy/tinyproxy.conf
-    fi
-} &
+    } &
+fi
 
 cd /etc/openvpn
 
-openvpn --verb $LOG_LEVEL --config $config_file
+openvpn --verb $LOG_LEVEL --auth-nocache --config $config_file
