@@ -127,7 +127,7 @@ if [ "$TINYPROXY" = "on" ]; then
     {
         echo "[INFO] Running Tinyproxy"
         # Wait for VPN connection to be established
-        while ! ping -c 1 1.1.1.1 > /dev/null 2&>1; do
+        while ! ping -c 1 1.1.1.1 > /dev/null 2>&1; do
             sleep 1
         done
 
@@ -154,7 +154,7 @@ fi
 if [ "$SHADOWSOCKS" = "on" ]; then
     {
         echo "[INFO] Running Shadowsocks"
-        while ! ping -c 1 1.1.1.1 > /dev/null 2&>1; do
+        while ! ping -c 1 1.1.1.1 > /dev/null 2>&1; do
             sleep 1
         done
 
