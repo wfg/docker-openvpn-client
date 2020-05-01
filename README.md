@@ -5,7 +5,7 @@
 This image requires the user to supply the necessary OpenVPN configuration file(s). Because of this, any VPN provider should work (however, if you find something that doesn't, please open an issue for it).
 
 ## Why?
-Having a containerized VPN client lets you easy choose exactly what you want to use the VPN at the Docker level instead of having to set up split tunnelling at the VPN level. It also keeps you from having to install an OpenVPN client on the underlying host.
+Having a containerized VPN client lets you easily choose exactly what you want to use the VPN at the Docker level instead of having to set up split tunnelling at the VPN level. It also keeps you from having to install an OpenVPN client on the underlying host.
 
 The idea for this image came from a similar project by [qdm12](https://github.com/qdm12) that has since evolved into something bigger and more complex than I wanted to use. I decided to dissect it and take it in my own direction. I plan to keep everything here well-documented because I want this to be a learning experience for both me and hopefully anyone else that uses it.
 
