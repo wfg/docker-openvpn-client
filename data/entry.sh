@@ -44,10 +44,11 @@ echo -e "\n---- OpenVPN Configuration ----"
 
 # Create a new configuration file to modify so the original is left untouched.
 config_file_modified=${config_file_original}.modified
-cp $config_file_original $config_file_modified
 
 # These configuration file changes are required by Alpine.
-echo "Making required changes to the configuration file."
+echo "Creating $config_file_modified and making required changes to that file."
+cp $config_file_original $config_file_modified
+
 sed -i \
     -e '/up /c up \/etc\/openvpn\/up.sh' \
     -e '/down /c down \/etc\/openvpn\/down.sh' \
@@ -79,8 +80,7 @@ if [ $KILL_SWITCH = "on" ]; then
     echo "Creating VPN kill switch and local routes."
 
     echo "Allowing established and related connections..."
-    iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-    iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    iptables -A INPUT -m conntrack --ctstate ESTABLISHED -j ACCEPT
 
     echo "Allowing loopback connections..."
     iptables -A INPUT -i lo -j ACCEPT
@@ -110,7 +110,7 @@ if [ $KILL_SWITCH = "on" ]; then
         domain=$(echo "$line" | cut -d " " -f 1)
         port=$(echo "$line" | cut -d " " -f 2)
         proto=$(echo "$line" | cut -d " " -f 3 | cut -c1-3)
-        for ip in $(nslookup $domain localhost | tail -n +4 | grep -Eo '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' | sort | uniq); do
+        for ip in $(dig -4 +short $domain); do
             echo "    $domain (IP:$ip PORT:$port)"
             iptables -A OUTPUT -o eth0 -d $ip -p ${proto:-$remote_proto} --dport ${port:-$remote_port} -j ACCEPT
         done
@@ -142,8 +142,10 @@ else
 fi
 
 if [ "$SHADOWSOCKS" = "on" ]; then
+    # https://www.gnu.org/software/bash/manual/html_node/Command-Grouping.html
     {
         echo "[INFO] Running Shadowsocks"
+        # Wait for VPN connection to be established
         while ! ping -c 1 1.1.1.1 > /dev/null 2>&1; do
             sleep 1
         done
@@ -159,11 +161,9 @@ if [ "$SHADOWSOCKS" = "on" ]; then
 fi
 
 if [ "$TINYPROXY" = "on" ]; then
-    # start list of commands to run Tinyproxy
     # https://www.gnu.org/software/bash/manual/html_node/Command-Grouping.html
     {
         echo "[INFO] Running Tinyproxy"
-        # Wait for VPN connection to be established
         while ! ping -c 1 1.1.1.1 > /dev/null 2>&1; do
             sleep 1
         done
@@ -184,7 +184,7 @@ if [ "$TINYPROXY" = "on" ]; then
         fi
 
         sleep 1
-        tinyproxy -c /data/tinyproxy.conf &
+        tinyproxy -c /data/tinyproxy.conf
     } &
 fi
 
