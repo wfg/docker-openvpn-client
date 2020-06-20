@@ -1,8 +1,9 @@
-FROM alpine:3.11.6
+FROM alpine:3.12
 
 LABEL maintainer="yacht7@protonmail.com"
 
-ENV KILL_SWITCH=on
+ENV KILL_SWITCH=on\
+    VPN_LOG_LEVEL=3
 
 RUN \
     echo '@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
@@ -19,4 +20,4 @@ RUN \
 
 COPY data/ /data
 
-ENTRYPOINT ["/data/entry.sh"]
+ENTRYPOINT ["/data/scripts/entry.sh"]
