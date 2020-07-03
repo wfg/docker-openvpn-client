@@ -60,14 +60,6 @@ sed -i \
     -e 's/^proto tcp$/proto tcp4/' \
     $config_file_modified
 
-if ! grep -q 'pull-filter ignore "route-ipv6"' $config_file_modified; then
-    printf '\npull-filter ignore "route-ipv6"' >> $config_file_modified
-fi
-
-if ! grep -q 'pull-filter ignore "ifconfig-ipv6"' $config_file_modified; then
-    printf '\npull-filter ignore "ifconfig-ipv6"' >> $config_file_modified
-fi
-
 echo -e "Changes made.\n"
 
 trap cleanup INT TERM
@@ -166,12 +158,9 @@ if [ "$TINYPROXY" = "on" ]; then
     /data/scripts/tinyproxy-wrapper.sh &
 fi
 
-# /data/scripts/healthcheck.sh &
-# healthcheck_child=$!
-
 echo -e "Running OpenVPN client.\n"
 
-openvpn --auth-nocache --cd /data/vpn --verb $vpn_log_level --config $config_file_modified &
+openvpn --auth-nocache --config $config_file_modified --verb $vpn_log_level --cd /data/vpn --pull-filter ignore "route-ipv6" --pull-filter ignore "ifconfig-ipv6" --up-restart &
 openvpn_child=$!
 
 wait $openvpn_child

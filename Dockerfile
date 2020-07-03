@@ -20,4 +20,6 @@ RUN \
 
 COPY data/ /data
 
+HEALTHCHECK CMD ping -c 3 1.1.1.1 || exit 1
+
 ENTRYPOINT ["/data/scripts/entry.sh"]
