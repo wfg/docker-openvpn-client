@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cleanup() {
+function cleanup {
     # When you run `docker stop` or any equivalent, a SIGTERM signal is sent to PID 1.
     # A process running as PID 1 inside a container is treated specially by Linux:
     # it ignores any signal with the default action. As a result, the process will
@@ -64,7 +64,10 @@ echo -e "Changes made.\n"
 
 trap cleanup INT TERM
 
-if [ $KILL_SWITCH = "on" ]; then 
+# NOTE: When testing with the kill switch enabled, don't forget to pass in the
+# local subnet. It will save a lot of headache.
+
+if [ $KILL_SWITCH = "on" ]; then
     local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " " -f 1)
     default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
 
@@ -160,7 +163,14 @@ fi
 
 echo -e "Running OpenVPN client.\n"
 
-openvpn --auth-nocache --config $config_file_modified --verb $vpn_log_level --cd /data/vpn --pull-filter ignore "route-ipv6" --pull-filter ignore "ifconfig-ipv6" --up-restart &
+openvpn --config $config_file_modified \
+    --verb $vpn_log_level \
+    --auth-nocache \
+    --connect-retry-max 10 \
+    --pull-filter ignore "route-ipv6" \
+    --pull-filter ignore "ifconfig-ipv6" \
+    --up-restart \
+    --cd /data/vpn &
 openvpn_child=$!
 
 wait $openvpn_child

@@ -14,7 +14,7 @@ RUN \
         tinyproxy
 
 RUN \
-    mkdir -p /data/vpn /var/log/openvpn && \
+    mkdir -p /data/vpn && \
     addgroup -S shadowsocks && \
     adduser -S -G shadowsocks -g "shadowsocks user" -H -h /dev/null shadowsocks
 

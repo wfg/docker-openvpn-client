@@ -1,6 +1,6 @@
 # OpenVPN Client for Docker
 ## What is this and what does it do?
-[`yacht7/openvpn-client`](https://hub.docker.com/r/yacht7/openvpn-client) is a containerized OpenVPN client. It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason. It also includes two types of proxy: HTTP (Tinyproxy) and SOCKS5 (Shadowsocks). These allow hosts and non-containerized applications to use the VPN without having to run VPN clients on every host.
+[`yacht7/openvpn-client`](https://hub.docker.com/r/yacht7/openvpn-client) is a containerized OpenVPN client. It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason. It also includes two types of proxy: HTTP (Tinyproxy) and SOCKS5 (Shadowsocks). These allow hosts and non-containerized applications to use the VPN without having to run VPN clients on those hosts.
 
 This image requires you to supply the necessary OpenVPN configuration file(s). Because of this, any VPN provider should work (however, if you find something that doesn't, please open an issue for it).
 
@@ -31,7 +31,7 @@ docker run -d \
   --name=openvpn-client \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
-  -v <path/to/config>:/data/vpn
+  -v <path/to/config>:/data/vpn \
   yacht7/openvpn-client
 ```
 
