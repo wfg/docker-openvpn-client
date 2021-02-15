@@ -1,6 +1,6 @@
 # OpenVPN Client for Docker
 ## What is this and what does it do?
-[`yacht7/openvpn-client`](https://hub.docker.com/r/yacht7/openvpn-client) is a containerized OpenVPN client. It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason. It also includes two types of proxy: HTTP (Tinyproxy) and SOCKS5 (Shadowsocks). These allow hosts and non-containerized applications to use the VPN without having to run VPN clients on those hosts.
+`ghcr.io/wfg/openvpn-client` is a containerized OpenVPN client. It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason. It also includes an HTTP proxy server ([Tinyproxy](https://tinyproxy.github.io/)) and a SOCKS proxy server ([Dante](https://www.inet.no/dante/index.html)). This allows hosts and non-containerized applications to use the VPN without having to run VPN clients on those hosts.
 
 This image requires you to supply the necessary OpenVPN configuration file(s). Because of this, any VPN provider should work (however, if you find something that doesn't, please open an issue for it).
 
@@ -11,19 +11,19 @@ The idea for this image came from a similar project by [qdm12](https://github.co
 
 ## How do I use it?
 ### Getting the image
-You can either pull it from Docker Hub or build it yourself.
+You can either pull it from GitHub Container Registry or build it yourself.
 
-To pull from [Docker Hub](https://hub.docker.com/r/yacht7/openvpn-client), run `docker pull yacht7/openvpn-client`.
+To pull from GitHub Container Registry, run `docker pull ghcr.io/wfg/openvpn-client`.
 
 To build it yourself, do the following:
 ```bash
-git clone https://github.com/yacht7/docker-openvpn-client.git
+git clone https://github.com/wfg/docker-openvpn-client.git
 cd docker-openvpn-client
-docker build -t yacht7/openvpn-client .
+docker build -t ghcr.io/wfg/openvpn-client .
 ```
 
 ### Creating and running a container
-The image requires the container be created with the `NET_ADMIN` capability and `/dev/net/tun` accessible. Below are bare-bones examples for `docker run` and Compose; however, you'll probably want to do more than just run the VPN client. See the sections below to learn how to use the [proxies](#shadowsocks-and-tinyproxy) and have [other containers use `openvpn-client`'s network stack](#using-with-other-containers).
+The image requires the container be created with the `NET_ADMIN` capability and `/dev/net/tun` accessible. Below are bare-bones examples for `docker run` and Compose; however, you'll probably want to do more than just run the VPN client. See the sections below to learn how to use the [proxies](#http_proxy-and-socks_proxy) and have [other containers use `openvpn-client`'s network stack](#using-with-other-containers).
 
 #### `docker run`
 ```bash
@@ -32,7 +32,7 @@ docker run -d \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
   -v <path/to/config>:/data/vpn \
-  yacht7/openvpn-client
+  ghcr.io/wfg/openvpn-client
 ```
 
 #### `docker-compose`
@@ -41,7 +41,7 @@ version: '2'
 
 services:
     openvpn-client:
-        image: yacht7/openvpn-client
+        image: ghcr.io/wfg/openvpn-client
         container_name: openvpn-client
         cap_add:
             - NET_ADMIN
@@ -55,32 +55,25 @@ services:
 #### Environment variables
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
-| `KILL_SWITCH` | `on` | The on/off status of VPN kill switch. To disable, set to any value besides `on`. |
 | `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. See important note about this [below](#subnets). |
-| `FORWARDED_PORTS` | | Port(s) forwarded by your VPN provider (e.g. `12345` or `9876,54321`) |
 | `VPN_LOG_LEVEL` | `3` | OpenVPN verbosity (`1`-`11`) |
-| `SHADOWSOCKS` | | The on/off status of Shadowsocks. To enable, set to `on`. Any other value, including leaving it unset, will cause the proxy to not start. |
-| `SHADOWSOCKS_PORT` | `8388` | The port on which Shadowsocks listens. If manually specified, choose a port over 1024. |
-| `SHADOWSOCKS_PASS` | `password` | A password is required to start Shadowsocks, so a default is specified. I recommend you change this if Shadowsocks is enabled. |
-| `TINYPROXY` | | The on/off status of Tinyproxy. To enable, set to `on`. Any other value, including leaving it unset, will cause the proxy to not start. |
-| `TINYPROXY_PORT` | `8888` | The port on which Tinyproxy listens. If manually specified, choose a port over 1024. |
-| `TINYPROXY_USER` | | Credentials for accessing Tinyproxy. If `TINYPROXY_USER` is specified, you must also specify `TINYPROXY_PASS`. |
-| `TINYPROXY_PASS` | | Credentials for accessing Tinyproxy. If `TINYPROXY_PASS` is specified, you must also specify `TINYPROXY_USER`. |
+| `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
+| `SOCKS_PROXY` | `off` | The on/off status of Dante, the built-in SOCKS proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 1080. |
+| `PROXY_USERNAME` | | Credentials for accessing the proxies. If `PROXY_USERNAME` is specified, you must also specify `PROXY_PASSWORD`. |
+| `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
 
 ##### Environment variable considerations
-###### `KILL_SWITCH`
-The kill switch allows connections outside of the VPN tunnel to the following two places: 1) the VPN server(s) specified in the configuration file and 2) all addresses specified in `SUBNETS`.
-
 ###### `SUBNETS`
-**Important**: The DNS server used by this container prior to VPN connection must be included in the value specified. For example, if your container is using 192.168.1.1 as a DNS server, then this address or an appropriate CIDR block must be included in `SUBNETS`. This is necessary because the kill switch blocks traffic outside of the VPN tunnel before it's actually established. If the DNS server is not whitelisted, the server addresses in the VPN configuration will not resolve.
+**Important**: The DNS server used by this container prior to VPN connection must be included in the value specified. For example, if your container is using 192.168.1.1 as a DNS server, then this address or an appropriate CIDR block must be included in `SUBNETS`. This is necessary because the kill switch blocks traffic outside of the VPN tunnel before it's actually established. If the DNS server is not allowed, the server addresses in the VPN configuration will not resolve.
 
-The subnets specified will have routes created and whitelists added in the firewall for them which allows for connectivity to and from hosts on the subnets.
+The subnets specified will be allowed through the firewall which allows for connectivity to and from hosts on the subnets.
 
-###### `SHADOWSOCKS` and `TINYPROXY`
-If enabling Shadowsocks or Tinyproxy, you'll want to publish the proxy's port in order to access the proxy. To do that using `docker run`, add `-p <host_port>:<container_port>` where `<host_port>` and `<container_port>` are whatever port your proxy is using (8388 and 8888 by default for Shadowsocks and Tinyproxy). If you're using `docker-compose`, add the below snippet to the `openvpn-client` service definition in your Compose file.
+###### `HTTP_PROXY` and `SOCKS_PROXY`
+If enabling the the proxy server(s), you'll want to publish the appropriate port(s) in order to access the server(s). To do that using `docker run`, add `-p <host_port>:8080` and/or `-p <host_port>:1080` where `<host_port>` is whatever port you want to use on the host. If you're using `docker-compose`, add the relevant port specification(s) from the snippet below to the `openvpn-client` service definition in your Compose file.
 ```yaml
 ports:
-    - <host_port>:<container_port>
+    - <host_port>:8080
+    - <host_port>:1080
 ```
 
 ### Using with other containers
@@ -102,7 +95,7 @@ ports:
 In both cases, replace `<host_port>` and `<container_port>` with the port used by your connected container.
 
 ### Verifying functionality
-Once you have container running `yacht7/openvpn-client`, run the following command to spin up a temporary container using `openvpn-client` for networking. The `wget -qO - ifconfig.me` bit will return the public IP of the container (and anything else using `openvpn-client` for networking). You should see an IP address owned by your VPN provider.
+Once you have container running `ghcr.io/wfg/openvpn-client`, run the following command to spin up a temporary container using `openvpn-client` for networking. The `wget -qO - ifconfig.me` bit will return the public IP of the container (and anything else using `openvpn-client` for networking). You should see an IP address owned by your VPN provider.
 ```bash
 docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfig.me
 ```

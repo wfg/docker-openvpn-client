@@ -39,9 +39,9 @@ fi
 echo "
 ---- Running with the following variables ----
 Kill switch: ${KILL_SWITCH:-off}
-Tinyproxy: ${TINYPROXY:-off}
-Shadowsocks: ${SHADOWSOCKS:-off}
-Whitelisting subnets: ${SUBNETS:-none}
+HTTP proxy: ${HTTP_PROXY:-off}
+SOCKS proxy: ${SOCKS_PROXY:-off}
+Allowing subnets: ${SUBNETS:-none}
 Using configuration file: $config_file_original
 Using OpenVPN log level: $vpn_log_level
 "
@@ -66,7 +66,6 @@ trap cleanup INT TERM
 
 # NOTE: When testing with the kill switch enabled, don't forget to pass in the
 # local subnet. It will save a lot of headache.
-
 if [ $KILL_SWITCH = "on" ]; then
     local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " " -f 1)
     default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
@@ -74,7 +73,7 @@ if [ $KILL_SWITCH = "on" ]; then
     echo "Creating VPN kill switch and local routes."
 
     echo "Allowing established and related connections..."
-    iptables -A INPUT -m conntrack --ctstate ESTABLISHED -j ACCEPT
+    iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
     echo "Allowing loopback connections..."
     iptables -A INPUT -i lo -j ACCEPT
@@ -114,18 +113,6 @@ if [ $KILL_SWITCH = "on" ]; then
     iptables -A INPUT -i tun0 -j ACCEPT
     iptables -A OUTPUT -o tun0 -j ACCEPT
 
-    echo "Allowing connections over VPN interface to forwarded ports..."
-    if [ ! -z $FORWARDED_PORTS ]; then
-        for port in ${FORWARDED_PORTS//,/ }; do
-            if $(echo $port | grep -Eq '^[0-9]+$') && [ $port -ge 1024 ] && [ $port -le 65535 ]; then
-                iptables -A INPUT -i tun0 -p tcp --dport $port -j ACCEPT
-                iptables -A INPUT -i tun0 -p udp --dport $port -j ACCEPT
-            else
-                echo "WARNING: $port not a valid port. Ignoring."
-            fi
-        done
-    fi
-
     echo "Preventing anything else..."
     iptables -P INPUT DROP
     iptables -P OUTPUT DROP
@@ -136,29 +123,30 @@ else
     echo -e "WARNING: VPN kill switch is disabled. Traffic will be allowed outside of the tunnel if the connection is lost.\n"
 fi
 
-if [ "$SHADOWSOCKS" = "on" ]; then
-    echo -e "Running Shadowsocks.\n"
-    sed -i \
-        -e "/server_port/c\    \"server_port\": ${SHADOWSOCKS_PORT:-8388}," \
-        -e "/password/c\    \"password\": \"${SHADOWSOCKS_PASS:-password}\"," \
-        /data/shadowsocks.conf
-    /data/scripts/shadowsocks-wrapper.sh &
-fi
-
-if [ "$TINYPROXY" = "on" ]; then
-    echo -e "Running Tinyproxy.\n"
-    sed -i \
-        -e "/Port/c Port ${TINYPROXY_PORT:-8888}" \
-        /data/tinyproxy.conf
-
-    if [ $TINYPROXY_USER ]; then
-        if [ $TINYPROXY_PASS ]; then
-            echo -e "\nBasicAuth $TINYPROXY_USER $TINYPROXY_PASS" >> /data/tinyproxy.conf
+if [ "$HTTP_PROXY" = "on" ]; then
+    if [ $PROXY_USERNAME ]; then
+        if [ $PROXY_PASSWORD ]; then
+            echo "Configuring proxy authentication."
+            echo -e "\nBasicAuth $PROXY_USERNAME $PROXY_PASSWORD" >> /data/tinyproxy.conf
         else
-            echo "WARNING: Tinyproxy username supplied without password. Starting without credentials."
+            echo "WARNING: Proxy username supplied without password. Starting HTTP proxy without credentials."
         fi
     fi
-    /data/scripts/tinyproxy-wrapper.sh &
+    /data/scripts/tinyproxy_wrapper.sh &
+fi
+
+if [ "$SOCKS_PROXY" = "on" ]; then
+    if [ $PROXY_USERNAME ]; then
+        if [ $PROXY_PASSWORD ]; then
+            echo "Configuring proxy authentication."
+            adduser -S -D -g $PROXY_USERNAME -H -h /dev/null $PROXY_USERNAME
+            echo "$PROXY_USERNAME:$PROXY_PASSWORD" | chpasswd 2> /dev/null
+            sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
+        else
+            echo "WARNING: Proxy username supplied without password. Starting SOCKS proxy without credentials."
+        fi
+    fi
+    /data/scripts/dante_wrapper.sh &
 fi
 
 echo -e "Running OpenVPN client.\n"

@@ -1,22 +1,38 @@
-FROM alpine:3.12
+FROM alpine:3.13.1 AS build
 
-LABEL maintainer="yacht7@protonmail.com"
+ARG DANTE_VERSION=1.4.2
 
-ENV KILL_SWITCH=on\
-    VPN_LOG_LEVEL=3
+RUN apk add --no-cache build-base
+RUN wget https://www.inet.no/dante/files/dante-$DANTE_VERSION.tar.gz --output-document - | tar -xz \
+    && cd dante-$DANTE_VERSION \
+    && ac_cv_func_sched_setscheduler=no ./configure --disable-client \
+    && make install
 
-RUN \
-    echo '@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
-    apk add --no-cache \
+
+FROM alpine:3.13.1
+
+ARG IMAGE_VERSION
+ARG BUILD_DATE
+
+LABEL source="github.com/wfg/docker-openvpn-client"
+LABEL version="$IMAGE_VERSION"
+LABEL created="$BUILD_DATE"
+
+COPY --from=build /usr/local/sbin/sockd /usr/local/sbin/sockd
+
+ENV KILL_SWITCH=on \
+    VPN_LOG_LEVEL=3 \
+    HTTP_PROXY=off \
+    SOCKS_PROXY=off
+
+RUN apk add --no-cache \
         bind-tools \
         openvpn \
-        shadowsocks-libev@testing \
         tinyproxy
 
-RUN \
-    mkdir -p /data/vpn && \
-    addgroup -S shadowsocks && \
-    adduser -S -G shadowsocks -g "shadowsocks user" -H -h /dev/null shadowsocks
+RUN mkdir -p /data/vpn \
+    && addgroup -S socks \
+    && adduser -S -D -G socks -g "socks" -H -h /dev/null socks
 
 COPY data/ /data
 
