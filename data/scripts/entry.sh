@@ -1,35 +1,37 @@
-#!/bin/sh
+#!/bin/ash
+# shellcheck shell=ash
+# shellcheck disable=SC2169 # making up for lack of ash support
 
-function cleanup {
+cleanup() {
     # When you run `docker stop` or any equivalent, a SIGTERM signal is sent to PID 1.
     # A process running as PID 1 inside a container is treated specially by Linux:
     # it ignores any signal with the default action. As a result, the process will
     # not terminate on SIGINT or SIGTERM unless it is coded to do so. Because of this,
     # I've defined behavior for when SIGINT and SIGTERM is received.
-    if [ $healthcheck_child ]; then
-        echo "Stopping healthcheck script..."
-        kill -TERM $healthcheck_child
-    fi
-
-    if [ $openvpn_child ]; then
+    if [ "$openvpn_child" ]; then
         echo "Stopping OpenVPN..."
-        kill -TERM $openvpn_child
+        kill -TERM "$openvpn_child"
     fi
 
     sleep 1
-    rm $config_file_modified
+    rm "$config_file_modified"
     echo "Exiting."
     exit 0
 }
 
+is_ip() {
+    echo "$1" | grep -Eq "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"
+}
+
 # Capture the filename of the first .conf file to use as the OpenVPN config.
-config_file_original=$(ls -1 /data/vpn/*.conf 2> /dev/null | head -1)
-if [ -z $config_file_original ]; then
+config_file_original=$(find /data/vpn -name "*.conf" 2> /dev/null | sort | head -1)
+if [ -z "$config_file_original" ]; then
     >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
     exit 1
 fi
 
-if ! $(echo $VPN_LOG_LEVEL | grep -Eq '^([1-9]|1[0-1])$'); then
+# shellcheck disable=SC2153
+if ! (echo "$VPN_LOG_LEVEL" | grep -Eq '^([1-9]|1[0-1])$'); then
     echo "WARNING: Invalid log level $VPN_LOG_LEVEL. Setting to default."
     vpn_log_level=3
 else
@@ -47,10 +49,10 @@ Using OpenVPN log level: $vpn_log_level
 "
 
 # Create a new configuration file to modify so the original is left untouched.
-config_file_modified=${config_file_original}.modified
+config_file_modified="${config_file_original}.modified"
 
 echo "Creating $config_file_modified and making required changes to that file."
-cp $config_file_original $config_file_modified
+cp "$config_file_original" "$config_file_modified"
 
 # These configuration file changes are required by Alpine.
 sed -i \
@@ -58,7 +60,7 @@ sed -i \
     -e '/down /c down \/etc\/openvpn\/down.sh' \
     -e 's/^proto udp$/proto udp4/' \
     -e 's/^proto tcp$/proto tcp4/' \
-    $config_file_modified
+    "$config_file_modified"
 
 echo -e "Changes made.\n"
 
@@ -66,7 +68,7 @@ trap cleanup INT TERM
 
 # NOTE: When testing with the kill switch enabled, don't forget to pass in the
 # local subnet. It will save a lot of headache.
-if [ $KILL_SWITCH = "on" ]; then
+if [ "$KILL_SWITCH" = "on" ]; then
     local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " " -f 1)
     default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
 
@@ -80,33 +82,40 @@ if [ $KILL_SWITCH = "on" ]; then
     iptables -A OUTPUT -o lo -j ACCEPT
 
     echo "Allowing Docker network connections..."
-    iptables -A INPUT -s $local_subnet -j ACCEPT
-    iptables -A OUTPUT -d $local_subnet -j ACCEPT
+    iptables -A INPUT -s "$local_subnet" -j ACCEPT
+    iptables -A OUTPUT -d "$local_subnet" -j ACCEPT
 
     echo "Allowing specified subnets..."
     # for every specified subnet...
     for subnet in ${SUBNETS//,/ }; do
         # create a route to it and...
-        ip route add $subnet via $default_gateway dev eth0
+        ip route add "$subnet" via "$default_gateway" dev eth0
         # allow connections
-        iptables -A INPUT -s $subnet -j ACCEPT
-        iptables -A OUTPUT -d $subnet -j ACCEPT
+        iptables -A INPUT -s "$subnet" -j ACCEPT
+        iptables -A OUTPUT -d "$subnet" -j ACCEPT
     done
 
     echo "Allowing remote servers in configuration file..."
-    remote_port=$(grep "port " $config_file_modified | cut -d " " -f 2)
-    remote_proto=$(grep "proto " $config_file_modified | cut -d " " -f 2 | cut -c1-3)
-    remotes=$(grep "remote " $config_file_modified | cut -d " " -f 2-4)
+    remote_port=$(grep "port " "$config_file_modified" | cut -d " " -f 2)
+    remote_proto=$(grep "proto " "$config_file_modified" | cut -d " " -f 2 | cut -c1-3)
+    remotes=$(grep "remote " "$config_file_modified" | cut -d " " -f 2-4)
 
     echo "  Using:"
-    echo "$remotes" | while IFS= read line; do
-        domain=$(echo "$line" | cut -d " " -f 1)
-        port=$(echo "$line" | cut -d " " -f 2)
-        proto=$(echo "$line" | cut -d " " -f 3 | cut -c1-3)
-        for ip in $(dig -4 +short $domain); do
-            echo "    $domain (IP:$ip PORT:$port)"
-            iptables -A OUTPUT -o eth0 -d $ip -p ${proto:-$remote_proto} --dport ${port:-$remote_port} -j ACCEPT
-        done
+    echo "${remotes}" | while IFS= read -r line; do
+        # strip any comments from line that could mess up cuts
+        clean_line=${line%% #*}
+        addr=$(echo "$clean_line" | cut -d " " -f 1)
+        port=$(echo "$clean_line" | cut -d " " -f 2)
+        proto=$(echo "$clean_line" | cut -d " " -f 3 | cut -c1-3)
+        if is_ip "$addr"; then
+            echo "    IP: $addr PORT: $port"
+            iptables -A OUTPUT -o eth0 -d "$addr" -p "${proto:-$remote_proto}" --dport "${port:-$remote_port}" -j ACCEPT
+        else
+            for ip in $(dig -4 +short "$addr"); do
+                echo "    $addr (IP: $ip PORT: $port)"
+                iptables -A OUTPUT -o eth0 -d "$ip" -p "${proto:-$remote_proto}" --dport "${port:-$remote_port}" -j ACCEPT
+            done
+        fi
     done
 
     echo "Allowing connections over VPN interface..."
@@ -124,8 +133,8 @@ else
 fi
 
 if [ "$HTTP_PROXY" = "on" ]; then
-    if [ $PROXY_USERNAME ]; then
-        if [ $PROXY_PASSWORD ]; then
+    if [ "$PROXY_USERNAME" ]; then
+        if [ "$PROXY_PASSWORD" ]; then
             echo "Configuring proxy authentication."
             echo -e "\nBasicAuth $PROXY_USERNAME $PROXY_PASSWORD" >> /data/tinyproxy.conf
         else
@@ -136,10 +145,10 @@ if [ "$HTTP_PROXY" = "on" ]; then
 fi
 
 if [ "$SOCKS_PROXY" = "on" ]; then
-    if [ $PROXY_USERNAME ]; then
-        if [ $PROXY_PASSWORD ]; then
+    if [ "$PROXY_USERNAME" ]; then
+        if [ "$PROXY_PASSWORD" ]; then
             echo "Configuring proxy authentication."
-            adduser -S -D -g $PROXY_USERNAME -H -h /dev/null $PROXY_USERNAME
+            adduser -S -D -g "$PROXY_USERNAME" -H -h /dev/null "$PROXY_USERNAME"
             echo "$PROXY_USERNAME:$PROXY_PASSWORD" | chpasswd 2> /dev/null
             sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
         else
@@ -151,8 +160,8 @@ fi
 
 echo -e "Running OpenVPN client.\n"
 
-openvpn --config $config_file_modified \
-    --verb $vpn_log_level \
+openvpn --config "$config_file_modified" \
+    --verb "$vpn_log_level" \
     --auth-nocache \
     --connect-retry-max 10 \
     --pull-filter ignore "route-ipv6" \

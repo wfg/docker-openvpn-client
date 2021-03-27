@@ -1,4 +1,4 @@
-FROM alpine:3.13.1 AS build
+FROM alpine:3.13 AS build
 
 ARG DANTE_VERSION=1.4.2
 
@@ -9,7 +9,7 @@ RUN wget https://www.inet.no/dante/files/dante-$DANTE_VERSION.tar.gz --output-do
     && make install
 
 
-FROM alpine:3.13.1
+FROM alpine:3.13
 
 ARG IMAGE_VERSION
 ARG BUILD_DATE

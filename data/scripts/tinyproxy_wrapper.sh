@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/ash
+# shellcheck shell=ash
+# shellcheck disable=SC2169 # making up for lack of ash support
 
 echo -e "Running Tinyproxy HTTP proxy server.\n"
 
