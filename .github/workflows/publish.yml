@@ -18,7 +18,7 @@ jobs:
 
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#/refs/tags/v}
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
