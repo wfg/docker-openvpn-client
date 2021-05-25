@@ -58,6 +58,7 @@ cp "$config_file_original" "$config_file_modified"
 sed -i \
     -e '/up /c up \/etc\/openvpn\/up.sh' \
     -e '/down /c down \/etc\/openvpn\/down.sh' \
+    -e '/#script-security 2/cscript-security 2' \
     -e 's/^proto udp$/proto udp4/' \
     -e 's/^proto tcp$/proto tcp4/' \
     "$config_file_modified"
