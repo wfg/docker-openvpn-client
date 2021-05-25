@@ -1,7 +1,3 @@
-FROM alpine:3.13 AS build
-
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.13/community" >> /etc/apk/repositories
-
 FROM alpine:3.13
 
 ARG IMAGE_VERSION
@@ -18,9 +14,9 @@ ENV KILL_SWITCH=on \
 
 RUN apk add --no-cache \
         bind-tools \
+        dante-server \
         openvpn \
-        tinyproxy \
-        dante-server
+        tinyproxy
 
 RUN mkdir -p /data/vpn
 
