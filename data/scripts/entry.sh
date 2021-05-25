@@ -43,6 +43,8 @@ echo "
 Kill switch: ${KILL_SWITCH:-off}
 HTTP proxy: ${HTTP_PROXY:-off}
 SOCKS proxy: ${SOCKS_PROXY:-off}
+Proxy username secret: ${PROXY_PASSWORD_SECRET:-none}
+Proxy password secret: ${PROXY_USERNAME_SECRET:-none}
 Allowing subnets: ${SUBNETS:-none}
 Using configuration file: $config_file_original
 Using OpenVPN log level: $vpn_log_level
@@ -140,6 +142,13 @@ if [ "$HTTP_PROXY" = "on" ]; then
         else
             echo "WARNING: Proxy username supplied without password. Starting HTTP proxy without credentials."
         fi
+    elif [ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]; then
+        if [ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]; then
+            echo "Configuring proxy authentication."
+            echo -e "\nBasicAuth $(cat /run/secrets/$PROXY_USERNAME_SECRET) $(cat /run/secrets/$PROXY_PASSWORD_SECRET)" >> /data/tinyproxy.conf
+        else
+            echo "WARNING: Credentials secrets not read. Starting HTTP proxy without credentials."
+        fi
     fi
     /data/scripts/tinyproxy_wrapper.sh &
 fi
@@ -153,6 +162,15 @@ if [ "$SOCKS_PROXY" = "on" ]; then
             sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
         else
             echo "WARNING: Proxy username supplied without password. Starting SOCKS proxy without credentials."
+        fi
+    elif [ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]; then
+        if [ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]; then
+            echo "Configuring proxy authentication."
+            adduser -S -D -g "$PROXY_USERNAME" -H -h /dev/null "$PROXY_USERNAME"
+            echo "$(cat /run/secrets/$PROXY_USERNAME_SECRET):$(cat /run/secrets/$PROXY_PASSWORD_SECRET)" | chpasswd 2> /dev/null
+            sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
+        else
+            echo "WARNING: Credentials secrets not read. Starting SOCKS proxy without credentials."
         fi
     fi
     /data/scripts/dante_wrapper.sh &
