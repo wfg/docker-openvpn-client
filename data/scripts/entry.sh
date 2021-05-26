@@ -166,7 +166,7 @@ if [ "$SOCKS_PROXY" = "on" ]; then
     elif [ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]; then
         if [ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]; then
             echo "Configuring proxy authentication."
-            adduser -S -D -g "$PROXY_USERNAME" -H -h /dev/null "$PROXY_USERNAME"
+            adduser -S -D -g "$(cat /run/secrets/$PROXY_USERNAME_SECRET)" -H -h /dev/null "$(cat /run/secrets/$PROXY_USERNAME_SECRET)"
             echo "$(cat /run/secrets/$PROXY_USERNAME_SECRET):$(cat /run/secrets/$PROXY_PASSWORD_SECRET)" | chpasswd 2> /dev/null
             sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
         else
