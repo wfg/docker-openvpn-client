@@ -4,7 +4,7 @@
 
 echo -e "Running Tinyproxy HTTP proxy server.\n"
 
-until ping -c 3 1.1.1.1 > /dev/null 2>&1; do
+until ip link show tun0 2>&1 | grep -qv "does not exist"; do
     sleep 1
 done
 
