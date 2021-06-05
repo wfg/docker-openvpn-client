@@ -70,9 +70,9 @@ trap cleanup INT TERM
 
 # NOTE: When testing with the kill switch enabled, don't forget to pass in the
 # local subnet. It will save a lot of headache.
+default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
 if [ "$KILL_SWITCH" = "on" ]; then
     local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " " -f 1)
-    default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
 
     echo "Creating VPN kill switch and local routes."
 
@@ -132,12 +132,17 @@ if [ "$KILL_SWITCH" = "on" ]; then
     echo -e "iptables rules created and routes configured.\n"
 else
     echo -e "WARNING: VPN kill switch is disabled. Traffic will be allowed outside of the tunnel if the connection is lost.\n"
+    echo "Creating routes to specified subnets..."
+    for subnet in ${SUBNETS//,/ }; do
+        ip route add "$subnet" via "$default_gateway" dev eth0
+    done
+    echo -e "Routes created.\n"
 fi
 
 if [ "$HTTP_PROXY" = "on" ]; then
     if [ "$PROXY_USERNAME" ]; then
         if [ "$PROXY_PASSWORD" ]; then
-            echo "Configuring proxy authentication."
+            echo "Configuring HTTP proxy authentication."
             echo -e "\nBasicAuth $PROXY_USERNAME $PROXY_PASSWORD" >> /data/tinyproxy.conf
         else
             echo "WARNING: Proxy username supplied without password. Starting HTTP proxy without credentials."
@@ -156,7 +161,7 @@ fi
 if [ "$SOCKS_PROXY" = "on" ]; then
     if [ "$PROXY_USERNAME" ]; then
         if [ "$PROXY_PASSWORD" ]; then
-            echo "Configuring proxy authentication."
+            echo "Configuring SOCKS proxy authentication."
             adduser -S -D -g "$PROXY_USERNAME" -H -h /dev/null "$PROXY_USERNAME"
             echo "$PROXY_USERNAME:$PROXY_PASSWORD" | chpasswd 2> /dev/null
             sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
@@ -184,6 +189,7 @@ openvpn --config "$config_file_modified" \
     --connect-retry-max 10 \
     --pull-filter ignore "route-ipv6" \
     --pull-filter ignore "ifconfig-ipv6" \
+    --script-security 2 \
     --up-restart \
     --cd /data/vpn &
 openvpn_child=$!
