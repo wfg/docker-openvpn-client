@@ -1,0 +1,32 @@
+# Use this file as an example if you need help writing your Compose files.
+# The commented-out parts may or may not be relevant to your setup.
+
+services:
+  vpn:
+    image: ghcr.io/wfg/openvpn-client
+    # build: .
+    container_name: openvpn-client
+    cap_add: 
+      - NET_ADMIN
+    devices: 
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      # - SUBNETS=192.168.10.0/24
+      - HTTP_PROXY=on
+      - SOCKS_PROXY=on
+      # - PROXY_USERNAME_SECRET=username # <-- If used, these must match the name of a
+      # - PROXY_PASSWORD_SECRET=password # <-- secret (NOT the file used by the secret)
+    # volumes: 
+    #   - ~/local/vpn:/data/vpn
+    ports:
+      - 1080:1080
+      - 8088:8080
+    # secrets:
+    #   - username
+    #   - password
+
+# secrets:
+#   username:
+#     file: ~/local/secrets/username
+#   password:
+#     file: ~/local/secrets/password
