@@ -50,8 +50,6 @@ docker run --detach \
 
 #### `docker-compose`
 ```yaml
-version: "2.4"
-
 services:
   openvpn-client:
     image: ghcr.io/wfg/openvpn-client
@@ -99,6 +97,10 @@ ports:
   - <host_port>:8080
   - <host_port>:1080
 ```
+
+###### `PROXY_USERNAME_SECRET` and `PROXY_PASSWORD_SECRET`
+Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
+See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
 
 ### Using with other containers
 Once you have your `openvpn-client` container up and running, you can tell other containers to use `openvpn-client`'s network stack which gives them the ability to utilize the VPN tunnel.
