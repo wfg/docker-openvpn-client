@@ -181,9 +181,20 @@ if [ "$SOCKS_PROXY" = "on" ]; then
     /data/scripts/dante_wrapper.sh &
 fi
 
+ovpn_auth_flag=''
+if [ -n "$OPENVPN_AUTH_SECRET" ]; then 
+    if [ -f "/run/secrets/$OPENVPN_AUTH_SECRET" ]; then
+        echo "Configuring OpenVPN authentication."
+        ovpn_auth_flag="--auth-user-pass /run/secrets/$OPENVPN_AUTH_SECRET"
+    else
+        echo "WARNING: OpenVPN Credentials secrets fail to read."
+    fi
+fi
+
 echo -e "Running OpenVPN client.\n"
 
 openvpn --config "$config_file_modified" \
+    $ovpn_auth_flag \
     --verb "$vpn_log_level" \
     --auth-nocache \
     --connect-retry-max 10 \
