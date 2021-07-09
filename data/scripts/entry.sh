@@ -23,13 +23,6 @@ is_ip() {
     echo "$1" | grep -Eq "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"
 }
 
-# Capture the filename of the first .conf file to use as the OpenVPN config.
-config_file_original=$(find /data/vpn -name "*.conf" 2> /dev/null | sort | head -1)
-if [ -z "$config_file_original" ]; then
-    >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
-    exit 1
-fi
-
 # shellcheck disable=SC2153
 if ! (echo "$VPN_LOG_LEVEL" | grep -Eq '^([1-9]|1[0-1])$'); then
     echo "WARNING: Invalid log level $VPN_LOG_LEVEL. Setting to default."
@@ -46,9 +39,19 @@ SOCKS proxy: ${SOCKS_PROXY:-off}
 Proxy username secret: ${PROXY_PASSWORD_SECRET:-none}
 Proxy password secret: ${PROXY_USERNAME_SECRET:-none}
 Allowing subnets: ${SUBNETS:-none}
-Using configuration file: $config_file_original
-Using OpenVPN log level: $vpn_log_level
-"
+Using OpenVPN log level: $vpn_log_level"
+
+if [ -n "$VPN_CONFIG_FILE" ]; then
+    config_file_original="/data/vpn/$VPN_CONFIG_FILE"
+else
+    # Capture the filename of the first .conf file to use as the OpenVPN config.
+    config_file_original=$(find /data/vpn -name "*.conf" 2> /dev/null | sort | head -1)
+    if [ -z "$config_file_original" ]; then
+        >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
+        exit 1
+    fi
+fi
+echo "Using configuration file: $config_file_original"
 
 # Create a new configuration file to modify so the original is left untouched.
 config_file_modified="${config_file_original}.modified"

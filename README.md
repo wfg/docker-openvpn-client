@@ -70,6 +70,7 @@ services:
 | --- | --- | --- |
 | `KILL_SWITCH` | `on` | The on/off status of the network kill switch. |
 | `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. See important note about this [below](#subnets). |
+| `VPN_CONFIG_FILE` | | The OpenVPN config file to use. If this is unset, the first file with the extension .conf will be used. |
 | `VPN_LOG_LEVEL` | `3` | OpenVPN verbosity (`1`-`11`) |
 | `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
 | `SOCKS_PROXY` | `off` | The on/off status of Dante, the built-in SOCKS proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 1080. |
