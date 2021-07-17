@@ -1,9 +1,12 @@
 name: Publish
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag'
+        required: true
+        default: 'latest'
 
 env:
   IMAGE_NAME: openvpn-client
@@ -16,10 +19,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
-
       - name: Log in to registry
         uses: docker/login-action@v1
         with:
@@ -27,10 +26,28 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create tags
+        id: tags
+        run: |
+          vpatch=${{ github.event.inputs.image_tag }}
+          echo ::set-output name=vpatch::$vpatch
+          echo ::set-output name=vminor::${vpatch%.*}
+          echo ::set-output name=vmajor::${vpatch%%.*}
+          
+          patch=${${{ github.event.inputs.image_tag }}#v}
+          echo ::set-output name=patch::$patch
+          echo ::set-output name=minor::${patch%.*}
+          echo ::set-output name=major::${patch%%.*}
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           tags: |
-            ghcr.io/wfg/openvpn-client:${{ steps.get_version.outputs.VERSION }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vpatch }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vminor }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vmajor }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.patch }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.minor }}
+            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.major }}
             ghcr.io/wfg/openvpn-client:latest
           push: true
