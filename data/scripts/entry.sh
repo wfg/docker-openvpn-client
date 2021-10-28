@@ -110,15 +110,18 @@ if [ "$KILL_SWITCH" = "on" ]; then
         # strip any comments from line that could mess up cuts
         clean_line=${line%% #*}
         addr=$(echo "$clean_line" | cut -d " " -f 1)
-        port=$(echo "$clean_line" | cut -d " " -f 2)
-        proto=$(echo "$clean_line" | cut -d " " -f 3 | cut -c1-3)
+        port=$(echo "$clean_line" | cut -s -d " " -f 2)
+        proto=$(echo "$clean_line" | cut -s -d " " -f 3 | cut -c1-3)
+        port=${port:-${remote_port:-1194}}
+        proto=${proto:-${remote_proto:-udp}}
+
         if is_ip "$addr"; then
-            echo "    IP: $addr PORT: $port"
-            iptables -A OUTPUT -o eth0 -d "$addr" -p "${proto:-$remote_proto}" --dport "${port:-$remote_port}" -j ACCEPT
+            echo "    IP: $addr PORT: $port PROTO: $proto"
+            iptables -A OUTPUT -o eth0 -d "$addr" -p "${proto}" --dport "${port}" -j ACCEPT
         else
             for ip in $(dig -4 +short "$addr"); do
-                echo "    $addr (IP: $ip PORT: $port)"
-                iptables -A OUTPUT -o eth0 -d "$ip" -p "${proto:-$remote_proto}" --dport "${port:-$remote_port}" -j ACCEPT
+                echo "    $addr (IP: $ip PORT: $port PROTO: $proto)"
+                iptables -A OUTPUT -o eth0 -d "$ip" -p "${proto}" --dport "${port}" -j ACCEPT
             done
         fi
     done
