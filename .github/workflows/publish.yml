@@ -1,12 +1,9 @@
 name: Publish
 
 on:
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Image tag'
-        required: true
-        default: 'latest'
+  push:
+    tags:
+      - 'v*'
 
 env:
   IMAGE_NAME: openvpn-client
@@ -29,12 +26,13 @@ jobs:
       - name: Create tags
         id: tags
         run: |
-          vpatch=${{ github.event.inputs.image_tag }}
+          ref=${{ github.ref }}
+          vpatch=${ref##refs/*/}
           echo ::set-output name=vpatch::$vpatch
           echo ::set-output name=vminor::${vpatch%.*}
           echo ::set-output name=vmajor::${vpatch%%.*}
           
-          patch=${${{ github.event.inputs.image_tag }}#v}
+          patch=${vpatch#v}
           echo ::set-output name=patch::$patch
           echo ::set-output name=minor::${patch%.*}
           echo ::set-output name=major::${patch%%.*}
