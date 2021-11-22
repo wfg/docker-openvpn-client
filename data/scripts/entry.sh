@@ -39,7 +39,8 @@ SOCKS proxy: ${SOCKS_PROXY:-off}
 Proxy username secret: ${PROXY_PASSWORD_SECRET:-none}
 Proxy password secret: ${PROXY_USERNAME_SECRET:-none}
 Allowing subnets: ${SUBNETS:-none}
-Using OpenVPN log level: $vpn_log_level"
+Using OpenVPN log level: $vpn_log_level
+Listening on: ${LISTEN_ON:-none}"
 
 if [ -n "$VPN_CONFIG_FILE" ]; then
     config_file_original="/data/vpn/$VPN_CONFIG_FILE"
@@ -165,6 +166,9 @@ if [ "$HTTP_PROXY" = "on" ]; then
 fi
 
 if [ "$SOCKS_PROXY" = "on" ]; then
+    if [ "$LISTEN_ON" ]; then
+            sed -i "s/internal: eth0/internal: $LISTEN_ON/" /data/sockd.conf    
+    fi
     if [ "$PROXY_USERNAME" ]; then
         if [ "$PROXY_PASSWORD" ]; then
             echo "Configuring SOCKS proxy authentication."
