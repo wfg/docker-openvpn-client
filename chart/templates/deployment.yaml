@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openvpn-client.fullname" . }}
+  labels:
+    {{- include "openvpn-client.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openvpn-client.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "openvpn-client.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+        - name: copy
+          image: busybox
+          command: ["/bin/sh", "-c", "cp -r /from/. /to"]
+          volumeMounts:
+            - name: openvpn-client
+              mountPath: /from
+            - name: configs
+              mountPath: /to
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+            privileged: true
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- if .Values.socksProxy.enabled }}
+            - containerPort: 1080
+            {{- end }}
+            {{- if .Values.httpProxy.enabled }}
+            - containerPort: 8080
+            {{- end }}
+          readinessProbe:
+            exec:
+              command: ["ping" , "-c", "3", "1.1.1.1"]
+          env:
+            - name: VPN_LOG_LEVEL
+              value: {{ .Values.vpnLogLevel | quote }}
+            - name: SOCKS_PROXY
+              value: {{- include "openvpn-client.boolean" .Values.socksProxy }}
+            - name: HTTP_PROXY
+              value: {{- include "openvpn-client.boolean" .Values.httpProxy }}
+            - name: KILL_SWITCH
+              value: {{- include "openvpn-client.boolean" .Values.killSwitch }}
+            {{- if .Values.listenOn }}
+            - name: LISTEN_ON
+              value: {{ .Values.listenOn }}
+            {{- end }}
+            {{- if .Values.subnets }}
+            - name: SUBNETS
+              value: {{ join "," .Values.subnets | quote }}
+            {{- end }}
+            {{- if .Values.auth.enabled }}
+            - name: PROXY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openvpn-client.authSecretName" . }}
+                  key: username
+            - name: PROXY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openvpn-client.authSecretName" . }}
+                  key: password
+            {{- end }}
+            {{- with .Values.configFiles.openVPNConfig }}
+            - name: VPN_CONFIG_FILE
+              value: {{ . }}
+            {{- end }}
+          volumeMounts:
+            - mountPath: /data/vpn
+              name: configs
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: openvpn-client
+          secret:
+            secretName: {{ include "openvpn-client.configSecretName" . }}
+        - name: configs
+          emptyDir: {}
