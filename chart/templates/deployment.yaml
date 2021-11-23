@@ -47,7 +47,7 @@ spec:
             {{- end }}
           readinessProbe:
             exec:
-              command: ["ping" , "-c", "3", "1.1.1.1"]
+              command: ["ping", "-c", "3", "1.1.1.1"]
           env:
             - name: VPN_LOG_LEVEL
               value: {{ .Values.vpnLogLevel | quote }}
