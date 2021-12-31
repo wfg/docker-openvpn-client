@@ -1,11 +1,11 @@
-FROM alpine:3.14
+FROM alpine:3.15
 
 ARG IMAGE_VERSION
 ARG BUILD_DATE
 
+LABEL created="$BUILD_DATE"
 LABEL source="github.com/wfg/docker-openvpn-client"
 LABEL version="$IMAGE_VERSION"
-LABEL created="$BUILD_DATE"
 
 ENV KILL_SWITCH=on \
     VPN_LOG_LEVEL=3 \
