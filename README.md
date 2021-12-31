@@ -82,13 +82,7 @@ services:
 
 ##### Environment variable considerations
 ###### `SUBNETS`
-**Important**:
-If the kill switch is enabled, the DNS server used by this container prior to VPN connection must be included in the value specified.
-For example, if your container is using 192.168.1.1 as a DNS server, then this address or an appropriate CIDR block must be included in `SUBNETS`.
-This is necessary because the kill switch blocks traffic outside of the VPN tunnel before it's actually established.
-If the DNS server is not allowed, the server addresses in the VPN configuration will not resolve.
-
-The subnets specified will be allowed through the firewall which allows for connectivity to and from hosts on the subnets.
+The specified subnets will be allowed through the firewall to allow for connectivity to and from hosts on the subnets.
 
 ###### `HTTP_PROXY` and `SOCKS_PROXY`
 If enabling the the proxy server(s), you'll want to publish the appropriate port(s) in order to access the server(s).

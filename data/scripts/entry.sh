@@ -121,6 +121,7 @@ if [ "$KILL_SWITCH" = "on" ]; then
             for ip in $(dig -4 +short "$addr"); do
                 echo "    $addr (IP: $ip PORT: $port PROTO: $proto)"
                 iptables -A OUTPUT -o eth0 -d "$ip" -p "${proto}" --dport "${port}" -j ACCEPT
+                echo "$ip $addr" >> /etc/hosts
             done
         fi
     done
