@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
   IMAGE_NAME: openvpn-client
@@ -16,6 +16,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Log in to registry
         uses: docker/login-action@v1
         with:
@@ -25,27 +31,27 @@ jobs:
 
       - name: Create tags
         id: tags
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/wfg/openvpn-client
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Create build args
+        id: build-args
         run: |
           ref=${{ github.ref }}
           vpatch=${ref##refs/*/}
-          echo ::set-output name=vpatch::$vpatch
-          echo ::set-output name=vminor::${vpatch%.*}
-          echo ::set-output name=vmajor::${vpatch%%.*}
-          
           patch=${vpatch#v}
-          echo ::set-output name=patch::$patch
-          echo ::set-output name=minor::${patch%.*}
-          echo ::set-output name=major::${patch%%.*}
+          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+          echo "::set-output name=version::$patch"
 
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          tags: |
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vpatch }}
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vminor }}
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.vmajor }}
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.patch }}
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.minor }}
-            ghcr.io/wfg/openvpn-client:${{ steps.tags.outputs.major }}
-            ghcr.io/wfg/openvpn-client:latest
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            BUILD_DATE=${{ steps.build-args.outputs.date }}
+            IMAGE_VERSION=${{ steps.build-args.outputs.version }}
           push: true
