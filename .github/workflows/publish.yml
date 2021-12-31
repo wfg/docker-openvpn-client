@@ -36,6 +36,8 @@ jobs:
           images: ghcr.io/wfg/openvpn-client
           tags: |
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       - name: Create build args
         id: build-args
@@ -43,7 +45,7 @@ jobs:
           ref=${{ github.ref }}
           vpatch=${ref##refs/*/}
           patch=${vpatch#v}
-          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+          echo "::set-output name=date::$(date --utc --iso-8601=seconds)"
           echo "::set-output name=version::$patch"
 
       - name: Build and push
