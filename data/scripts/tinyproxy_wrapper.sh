@@ -1,6 +1,4 @@
-#!/bin/ash
-# shellcheck shell=ash
-# shellcheck disable=SC2169 # making up for lack of ash support
+#!/bin/bash
 
 echo -e "Running Tinyproxy HTTP proxy server.\n"
 
@@ -8,8 +6,8 @@ until ip link show tun0 2>&1 | grep -qv "does not exist"; do
     sleep 1
 done
 
-function get_addr {
-   echo $(ip a show dev $1 | grep inet | cut -d " " -f 6 | cut -d "/" -f 1)
+get_addr() {
+   ip a show dev "$1" | grep inet | cut -d " " -f 6 | cut -d "/" -f 1
 } 
 
 addr_eth=${LISTEN_ON:-$(get_addr eth0)}

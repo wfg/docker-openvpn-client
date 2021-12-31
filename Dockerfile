@@ -3,9 +3,9 @@ FROM alpine:3.15
 ARG IMAGE_VERSION
 ARG BUILD_DATE
 
-LABEL created="$BUILD_DATE"
-LABEL source="github.com/wfg/docker-openvpn-client"
-LABEL version="$IMAGE_VERSION"
+LABEL org.opencontainers.image.created="$BUILD_DATE"
+LABEL org.opencontainers.image.source="github.com/wfg/docker-openvpn-client"
+LABEL org.opencontainers.image.version="$IMAGE_VERSION"
 
 ENV KILL_SWITCH=on \
     VPN_LOG_LEVEL=3 \
@@ -13,6 +13,7 @@ ENV KILL_SWITCH=on \
     SOCKS_PROXY=off
 
 RUN apk add --no-cache \
+        bash \
         bind-tools \
         dante-server \
         openvpn \

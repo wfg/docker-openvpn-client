@@ -1,6 +1,4 @@
-#!/bin/ash
-# shellcheck shell=ash
-# shellcheck disable=SC2169 # making up for lack of ash support
+#!/bin/bash
 
 cleanup() {
     # When you run `docker stop` or any equivalent, a SIGTERM signal is sent to PID 1.
@@ -185,34 +183,35 @@ if [ "$SOCKS_PROXY" = "on" ]; then
             echo "$(cat /run/secrets/$PROXY_USERNAME_SECRET):$(cat /run/secrets/$PROXY_PASSWORD_SECRET)" | chpasswd 2> /dev/null
             sed -i 's/socksmethod: none/socksmethod: username/' /data/sockd.conf
         else
-            echo "WARNING: Credentials secrets not read. Starting SOCKS proxy without credentials."
+            echo "WARNING: Credentials secrets not present. Starting SOCKS proxy without credentials."
         fi
     fi
     /data/scripts/dante_wrapper.sh &
 fi
 
-ovpn_auth_flag=''
-if [ -n "$OPENVPN_AUTH_SECRET" ]; then 
+openvpn_args=(
+    "--config" "$config_file_modified"
+    "--auth-nocache"
+    "--cd" "/data/vpn"
+    "--pull-filter" "ignore" "ifconfig-ipv6"
+    "--pull-filter" "ignore" "route-ipv6"
+    "--script-security" "2"
+    "--up-restart"
+    "--verb" "$vpn_log_level"
+)
+
+if [ "$OPENVPN_AUTH_SECRET" ]; then 
     if [ -f "/run/secrets/$OPENVPN_AUTH_SECRET" ]; then
         echo "Configuring OpenVPN authentication."
-        ovpn_auth_flag="--auth-user-pass /run/secrets/$OPENVPN_AUTH_SECRET"
+        openvpn_args+=("--auth-user-pass" "/run/secrets/$OPENVPN_AUTH_SECRET")
     else
-        echo "WARNING: OpenVPN Credentials secrets fail to read."
+        echo "WARNING: OpenVPN credentials secrets not present."
     fi
 fi
 
 echo -e "Running OpenVPN client.\n"
 
-openvpn --config "$config_file_modified" \
-    $ovpn_auth_flag \
-    --verb "$vpn_log_level" \
-    --auth-nocache \
-    --connect-retry-max 10 \
-    --pull-filter ignore "route-ipv6" \
-    --pull-filter ignore "ifconfig-ipv6" \
-    --script-security 2 \
-    --up-restart \
-    --cd /data/vpn &
+openvpn "${openvpn_args[@]}" &
 openvpn_child=$!
 
 wait $openvpn_child

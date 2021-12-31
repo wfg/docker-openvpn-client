@@ -1,6 +1,4 @@
-#!/bin/ash
-# shellcheck shell=ash
-# shellcheck disable=SC2169 # making up for lack of ash support
+#!/bin/bash
 
 echo -e "Running Dante SOCKS proxy server.\n"
 
