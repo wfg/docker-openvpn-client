@@ -78,6 +78,7 @@ services:
 | `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
 | `PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_USERNAME_SECRET` is specified, you must also specify `PROXY_PASSWORD_SECRET`. |
 | `PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_PASSWORD_SECRET` is specified, you must also specify `PROXY_USERNAME_SECRET`. |
+| `LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to allow all IP addresses. |
 
 ##### Environment variable considerations
 ###### `SUBNETS`
