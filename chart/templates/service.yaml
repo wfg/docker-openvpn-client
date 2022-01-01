@@ -1,0 +1,23 @@
+{{- if or .Values.socksProxy.enabled .Values.httpProxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openvpn-client.fullname" . }}
+  labels:
+    {{- include "openvpn-client.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    {{- if .Values.socksProxy.enabled }}
+    - port: 1080
+      protocol: TCP
+      name: socks5
+    {{- end }}
+    {{- if .Values.httpProxy.enabled }}
+    - port: 8080
+      protocol: TCP
+      name: http
+    {{- end }}
+  selector:
+    {{- include "openvpn-client.selectorLabels" . | nindent 4 }}
+{{- end }}

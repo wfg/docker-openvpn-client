@@ -1,0 +1,84 @@
+# Default values for openvpn-client.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/wfg/openvpn-client
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+service:
+  type: ClusterIP
+
+resources:
+  {}
+  # limits:
+  #   cpu: 10m
+  #   memory: 64Mi
+  # requests:
+  #   cpu: 10m
+  #   memory: 64Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+httpProxy:
+  # -- The on/off status of Tinyproxy, the built-in HTTP proxy server.
+  enabled: false
+
+socksProxy:
+  # -- The on/off status of Dante, the built-in SOCKS proxy server.
+  enabled: false
+
+# -- Address the proxies will be listening on. Set to `0.0.0.0` to allow all IP addresses.
+listenOn: ""
+
+auth:
+  # -- Whether to turn on authentication for the proxies
+  enabled: false
+  # -- Existing secret containing the credentials for accessing the proxies.
+  existingSecret: ""
+  proxyUsername: ""
+  proxyPassword: ""
+
+# -- OpenVPN verbosity (`1`-`11`)
+vpnLogLevel: 3
+
+# -- A list of one or more subnets to allow outside of the VPN tunnel.
+subnets:
+  []
+  # - "192.168.0.0/24"
+  # - "192.168.1.0/24"
+
+killSwitch:
+  # -- The on/off status of the network kill switch.
+  enabled: true
+
+configFiles:
+  # -- The OpenVPN config file to use. If this is unset, the first file with the extension `.conf` will be used.
+  openVPNConfig: ""
+  # -- OpenVPN config files
+  files:
+    {}
+    # example.conf: |-
+    #   # Your OpenVPN configuration file
+    #   Line 1
+    #   Line 2
