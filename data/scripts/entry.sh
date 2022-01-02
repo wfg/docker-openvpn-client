@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 cleanup() {
     # When you run `docker stop` or any equivalent, a SIGTERM signal is sent to PID 1.
@@ -6,7 +6,7 @@ cleanup() {
     # it ignores any signal with the default action. As a result, the process will
     # not terminate on SIGINT or SIGTERM unless it is coded to do so. Because of this,
     # I've defined behavior for when SIGINT and SIGTERM is received.
-    if [ "$openvpn_child" ]; then
+    if [[ -n "$openvpn_child" ]]; then
         echo "Stopping OpenVPN..."
         kill -TERM "$openvpn_child"
     fi
@@ -17,12 +17,9 @@ cleanup() {
     exit 0
 }
 
-is_ip() {
-    echo "$1" | grep -Eq "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"
-}
-
+# OpenVPN log levels are 1-11.
 # shellcheck disable=SC2153
-if ! (echo "$VPN_LOG_LEVEL" | grep -Eq '^([1-9]|1[0-1])$'); then
+if [[ "$VPN_LOG_LEVEL" -lt 1 || "$VPN_LOG_LEVEL" -gt 11 ]]; then
     echo "WARNING: Invalid log level $VPN_LOG_LEVEL. Setting to default."
     vpn_log_level=3
 else
@@ -40,12 +37,12 @@ Allowing subnets: ${SUBNETS:-none}
 Using OpenVPN log level: $vpn_log_level
 Listening on: ${LISTEN_ON:-none}"
 
-if [ -n "$VPN_CONFIG_FILE" ]; then
+if [[ -n "$VPN_CONFIG_FILE" ]]; then
     config_file_original="/data/vpn/$VPN_CONFIG_FILE"
 else
     # Capture the filename of the first .conf file to use as the OpenVPN config.
     config_file_original=$(find /data/vpn -name "*.conf" 2> /dev/null | sort | head -1)
-    if [ -z "$config_file_original" ]; then
+    if [[ -z "$config_file_original" ]]; then
         >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
         exit 1
     fi
@@ -70,10 +67,8 @@ echo -e "Changes made.\n"
 
 trap cleanup INT TERM
 
-# NOTE: When testing with the kill switch enabled, don't forget to pass in the
-# local subnet. It will save a lot of headache.
 default_gateway=$(ip r | grep 'default via' | cut -d " " -f 3)
-if [ "$KILL_SWITCH" = "on" ]; then
+if [[ "$KILL_SWITCH" == "on" ]]; then
     local_subnet=$(ip r | grep -v 'default via' | grep eth0 | tail -n 1 | cut -d " " -f 1)
 
     echo "Creating VPN kill switch and local routes."
@@ -100,29 +95,42 @@ if [ "$KILL_SWITCH" = "on" ]; then
     done
 
     echo "Allowing remote servers in configuration file..."
-    remote_port=$(grep "port " "$config_file_modified" | cut -d " " -f 2)
-    remote_proto=$(grep "proto " "$config_file_modified" | cut -d " " -f 2 | cut -c1-3)
-    remotes=$(grep "remote " "$config_file_modified" | cut -d " " -f 2-4)
+    global_port=$(grep "port " "$config_file_modified" | cut -d " " -f 2)
+    global_protocol=$(grep "proto " "$config_file_modified" | cut -d " " -f 2 | cut -c1-3)
+    remotes=$(grep "remote " "$config_file_modified")
 
     echo "  Using:"
-    echo "${remotes}" | while IFS= read -r line; do
-        # strip any comments from line that could mess up cuts
-        clean_line=${line%% #*}
-        addr=$(echo "$clean_line" | cut -d " " -f 1)
-        port=$(echo "$clean_line" | cut -s -d " " -f 2)
-        proto=$(echo "$clean_line" | cut -s -d " " -f 3 | cut -c1-3)
-        port=${port:-${remote_port:-1194}}
-        proto=${proto:-${remote_proto:-udp}}
+    comment_regex='^[[:space:]]*[#;]'
+    echo "$remotes" | while IFS= read -r line; do
+        # Ignore comments.
+        if ! [[ "$line" =~ $comment_regex ]]; then
+            # Remove the line prefix 'remote '.
+            line=${line#remote }
 
-        if is_ip "$addr"; then
-            echo "    IP: $addr PORT: $port PROTO: $proto"
-            iptables -A OUTPUT -o eth0 -d "$addr" -p "${proto}" --dport "${port}" -j ACCEPT
-        else
-            for ip in $(dig -4 +short "$addr"); do
-                echo "    $addr (IP: $ip PORT: $port PROTO: $proto)"
-                iptables -A OUTPUT -o eth0 -d "$ip" -p "${proto}" --dport "${port}" -j ACCEPT
-                echo "$ip $addr" >> /etc/hosts
-            done
+            # Remove any trailing comments.
+            line=${line%%#*}
+
+            # Split the line into an array.
+            # The first element is an address (IP or domain), the second is a port,
+            # and the fourth is a protocol.
+            IFS=' ' read -r -a remote <<< "$line"
+            address=${remote[0]}
+            # Use port from 'remote' line, then 'port' line, then '1194'.
+            port=${remote[1]:-${global_port:-1194}}
+            # Use protocol from 'remote' line, then 'proto' line, then 'udp'.
+            protocol=${remote[2]:-${global_protocol:-udp}}
+
+            ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
+            if [[ "$address" =~ $ip_regex ]]; then
+                echo "    IP: $address PORT: $port PROTOCOL: $protocol"
+                iptables -A OUTPUT -o eth0 -d "$address" -p "$protocol" --dport "$port" -j ACCEPT
+            else
+                for ip in $(dig -4 +short "$address"); do
+                    echo "    $address (IP: $ip PORT: $port PROTOCOL: $protocol)"
+                    iptables -A OUTPUT -o eth0 -d "$ip" -p "$protocol" --dport "$port" -j ACCEPT
+                    echo "$ip $address" >> /etc/hosts
+                done
+            fi
         fi
     done
 
@@ -145,16 +153,16 @@ else
     echo -e "Routes created.\n"
 fi
 
-if [ "$HTTP_PROXY" = "on" ]; then
-    if [ "$PROXY_USERNAME" ]; then
-        if [ "$PROXY_PASSWORD" ]; then
+if [[ "$HTTP_PROXY" == "on" ]]; then
+    if [[ -n "$PROXY_USERNAME" ]]; then
+        if [[ -n "$PROXY_PASSWORD" ]]; then
             echo "Configuring HTTP proxy authentication."
             echo -e "\nBasicAuth $PROXY_USERNAME $PROXY_PASSWORD" >> /data/tinyproxy.conf
         else
             echo "WARNING: Proxy username supplied without password. Starting HTTP proxy without credentials."
         fi
-    elif [ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]; then
-        if [ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]; then
+    elif [[ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]]; then
+        if [[ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]]; then
             echo "Configuring proxy authentication."
             echo -e "\nBasicAuth $(cat /run/secrets/$PROXY_USERNAME_SECRET) $(cat /run/secrets/$PROXY_PASSWORD_SECRET)" >> /data/tinyproxy.conf
         else
@@ -164,12 +172,12 @@ if [ "$HTTP_PROXY" = "on" ]; then
     /data/scripts/tinyproxy_wrapper.sh &
 fi
 
-if [ "$SOCKS_PROXY" = "on" ]; then
-    if [ "$LISTEN_ON" ]; then
+if [[ "$SOCKS_PROXY" == "on" ]]; then
+    if [[ -n "$LISTEN_ON" ]]; then
             sed -i "s/internal: eth0/internal: $LISTEN_ON/" /data/sockd.conf    
     fi
-    if [ "$PROXY_USERNAME" ]; then
-        if [ "$PROXY_PASSWORD" ]; then
+    if [[ -n "$PROXY_USERNAME" ]]; then
+        if [[ -n "$PROXY_PASSWORD" ]]; then
             echo "Configuring SOCKS proxy authentication."
             adduser -S -D -g "$PROXY_USERNAME" -H -h /dev/null "$PROXY_USERNAME"
             echo "$PROXY_USERNAME:$PROXY_PASSWORD" | chpasswd 2> /dev/null
@@ -177,8 +185,8 @@ if [ "$SOCKS_PROXY" = "on" ]; then
         else
             echo "WARNING: Proxy username supplied without password. Starting SOCKS proxy without credentials."
         fi
-    elif [ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]; then
-        if [ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]; then
+    elif [[ -f "/run/secrets/$PROXY_USERNAME_SECRET" ]]; then
+        if [[ -f "/run/secrets/$PROXY_PASSWORD_SECRET" ]]; then
             echo "Configuring proxy authentication."
             adduser -S -D -g "$(cat /run/secrets/$PROXY_USERNAME_SECRET)" -H -h /dev/null "$(cat /run/secrets/$PROXY_USERNAME_SECRET)"
             echo "$(cat /run/secrets/$PROXY_USERNAME_SECRET):$(cat /run/secrets/$PROXY_PASSWORD_SECRET)" | chpasswd 2> /dev/null
@@ -201,8 +209,8 @@ openvpn_args=(
     "--verb" "$vpn_log_level"
 )
 
-if [ "$OPENVPN_AUTH_SECRET" ]; then 
-    if [ -f "/run/secrets/$OPENVPN_AUTH_SECRET" ]; then
+if [[ -n "$OPENVPN_AUTH_SECRET" ]]; then 
+    if [[ -f "/run/secrets/$OPENVPN_AUTH_SECRET" ]]; then
         echo "Configuring OpenVPN authentication."
         openvpn_args+=("--auth-user-pass" "/run/secrets/$OPENVPN_AUTH_SECRET")
     else
