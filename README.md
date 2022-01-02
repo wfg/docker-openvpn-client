@@ -43,7 +43,6 @@ docker run --detach \
   --name=openvpn-client \
   --cap-add=NET_ADMIN \
   --device=/dev/net/tun \
-  --env KILL_SWITCH=off \
   --volume <path/to/config/dir>:/data/vpn \
   ghcr.io/wfg/openvpn-client
 ```
@@ -58,32 +57,28 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
-    environment:
-      - KILL_SWITCH=off
     volumes:
       - <path/to/config/dir>:/data/vpn
     restart: unless-stopped
 ```
 
-#### Environment variables
+#### Environment variables (alphabetical)
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
+| `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
 | `KILL_SWITCH` | `on` | The on/off status of the network kill switch. |
-| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. See important note about this [below](#subnets). |
+| `LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
+| `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
+| `PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_PASSWORD_SECRET` is specified, you must also specify `PROXY_USERNAME_SECRET`. |
+| `PROXY_USERNAME` | | Credentials for accessing the proxies. If `PROXY_USERNAME` is specified, you must also specify `PROXY_PASSWORD`. |
+| `PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_USERNAME_SECRET` is specified, you must also specify `PROXY_PASSWORD_SECRET`. |
+| `SOCKS_PROXY` | `off` | The on/off status of Dante, the built-in SOCKS proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 1080. |
+| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
+| `VPN_AUTH_SECRET` | | Docker secret that contain the credentials for accessing the VPN. |
 | `VPN_CONFIG_FILE` | | The OpenVPN config file to use. If this is unset, the first file with the extension .conf will be used. |
 | `VPN_LOG_LEVEL` | `3` | OpenVPN verbosity (`1`-`11`) |
-| `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
-| `SOCKS_PROXY` | `off` | The on/off status of Dante, the built-in SOCKS proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 1080. |
-| `PROXY_USERNAME` | | Credentials for accessing the proxies. If `PROXY_USERNAME` is specified, you must also specify `PROXY_PASSWORD`. |
-| `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
-| `PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_USERNAME_SECRET` is specified, you must also specify `PROXY_PASSWORD_SECRET`. |
-| `PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_PASSWORD_SECRET` is specified, you must also specify `PROXY_USERNAME_SECRET`. |
-| `LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to allow all IP addresses. |
 
 ##### Environment variable considerations
-###### `SUBNETS`
-The specified subnets will be allowed through the firewall to allow for connectivity to and from hosts on the subnets.
-
 ###### `HTTP_PROXY` and `SOCKS_PROXY`
 If enabling the the proxy server(s), you'll want to publish the appropriate port(s) in order to access the server(s).
 To do that using `docker run`, add `-p <host_port>:8080` and/or `-p <host_port>:1080` where `<host_port>` is whatever port you want to use on the host.
@@ -94,7 +89,7 @@ ports:
   - <host_port>:1080
 ```
 
-###### `PROXY_USERNAME_SECRET` and `PROXY_PASSWORD_SECRET`
+###### `PROXY_USERNAME_SECRET`, `PROXY_PASSWORD_SECRET`, and `VPN_AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
 See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
 
