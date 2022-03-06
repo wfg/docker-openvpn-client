@@ -42,18 +42,16 @@ if [[ -n "$VPN_CONFIG_FILE" ]]; then
 elif [[ -n "$VPN_CONFIG_PATTERN" ]]; then
     # Capture the filename of the random .conf file according to the pattern to use as OpenVPN config.
     config_file_original=$(find /data/vpn -name "$VPN_CONFIG_PATTERN" 2> /dev/null | sort | shuf -n 1)
-    if [[ -z "$config_file_original" ]]; then
-        >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
-        exit 1
-    fi
 else
     # Capture the filename of the random .conf file to use as the OpenVPN config.
     config_file_original=$(find /data/vpn -name "*.conf" 2> /dev/null | sort | shuf -n 1)
-    if [[ -z "$config_file_original" ]]; then
-        >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
-        exit 1
-    fi
 fi
+
+if [[ -z "$config_file_original" ]]; then
+    >&2 echo "ERROR: No configuration file found. Please check your mount and file permissions. Exiting."
+    exit 1
+fi
+
 echo "Using configuration file: $config_file_original"
 
 # Create a new configuration file to modify so the original is left untouched.
