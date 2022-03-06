@@ -53,7 +53,7 @@ echo "Using configuration file: $config_file_original"
 config_file_modified="${config_file_original}.modified"
 
 echo "Creating $config_file_modified and making required changes to that file."
-grep -Ev "(^up \s|^down \s)" "$config_file_original" > "$config_file_modified"
+grep -Ev "(^up\s|^down\s)" "$config_file_original" > "$config_file_modified"
 
 # These configuration file changes are required by Alpine.
 sed -i \
