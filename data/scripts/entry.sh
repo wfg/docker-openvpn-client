@@ -126,6 +126,11 @@ if [[ "$KILL_SWITCH" == "on" ]]; then
             # Use protocol from 'remote' line, then 'proto' line, then 'udp'.
             protocol=${remote[2]:-${global_protocol:-udp}}
 
+            # Map from OpenVPN tcp-client config option to tcp for iptables
+            if [[ $protocol == "tcp-client" ]]; then
+                protocol='tcp'
+            fi
+
             ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
             if [[ "$address" =~ $ip_regex ]]; then
                 echo "    IP: $address PORT: $port PROTOCOL: $protocol"
