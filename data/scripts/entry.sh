@@ -58,15 +58,16 @@ echo "Using configuration file: $config_file_original"
 config_file_modified="${config_file_original}.modified"
 
 echo "Creating $config_file_modified and making required changes to that file."
-cp "$config_file_original" "$config_file_modified"
+grep -Ev "(^up\s|^down\s)" "$config_file_original" > "$config_file_modified"
 
 # These configuration file changes are required by Alpine.
 sed -i \
-    -e '/up /c up \/etc\/openvpn\/up.sh' \
-    -e '/down /c down \/etc\/openvpn\/down.sh' \
     -e 's/^proto udp$/proto udp4/' \
     -e 's/^proto tcp$/proto tcp4/' \
     "$config_file_modified"
+
+echo "up /etc/openvpn/up.sh" >> "$config_file_modified"
+echo "down /etc/openvpn/down.sh" >> "$config_file_modified"
 
 echo -e "Changes made.\n"
 
