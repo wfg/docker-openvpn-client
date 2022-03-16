@@ -31,6 +31,7 @@ echo "
 Kill switch: ${KILL_SWITCH:-off}
 HTTP proxy: ${HTTP_PROXY:-off}
 SOCKS proxy: ${SOCKS_PROXY:-off}
+Keep /etc/resolv.conf unchanged: ${KEEP_DNS_UNCHANGED:-no}
 Proxy username secret: ${PROXY_PASSWORD_SECRET:-none}
 Proxy password secret: ${PROXY_USERNAME_SECRET:-none}
 Allowing subnets: ${SUBNETS:-none}
@@ -66,8 +67,10 @@ sed -i \
     -e 's/^proto tcp$/proto tcp4/' \
     "$config_file_modified"
 
-echo "up /etc/openvpn/up.sh" >> "$config_file_modified"
-echo "down /etc/openvpn/down.sh" >> "$config_file_modified"
+if [[ "$KEEP_DNS_UNCHANGED" != "yes" ]]; then 
+    echo "up /etc/openvpn/up.sh" >> "$config_file_modified"
+    echo "down /etc/openvpn/down.sh" >> "$config_file_modified"
+fi
 
 echo -e "Changes made.\n"
 
