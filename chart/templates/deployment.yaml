@@ -57,6 +57,8 @@ spec:
               value: {{- include "openvpn-client.boolean" .Values.httpProxy }}
             - name: KILL_SWITCH
               value: {{- include "openvpn-client.boolean" .Values.killSwitch }}
+            - name: KEEP_DNS_UNCHANGED
+              value: {{- include "openvpn-client.boolean" .Values.keepDNSUnchanged }}
             {{- if .Values.listenOn }}
             - name: LISTEN_ON
               value: {{ .Values.listenOn }}
