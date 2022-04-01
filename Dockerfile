@@ -10,16 +10,19 @@ LABEL org.opencontainers.image.version="$IMAGE_VERSION"
 ENV KILL_SWITCH=on \
     VPN_LOG_LEVEL=3 \
     HTTP_PROXY=off \
-    SOCKS_PROXY=off
+    SOCKS_PROXY=off \
+    SSH_TUNNEL=off
 
 RUN apk add --no-cache \
         bash \
         bind-tools \
         dante-server \
         openvpn \
-        tinyproxy
+        tinyproxy \
+        openssh
 
-RUN mkdir -p /data/vpn
+RUN mkdir -p /data/vpn \
+             /data/ssh
 
 COPY data/ /data
 
