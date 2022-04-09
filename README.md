@@ -90,9 +90,24 @@ ports:
   - <host_port>:1080
 ```
 
-###### `PROXY_USERNAME_SECRET`, `PROXY_PASSWORD_SECRET`, and `VPN_AUTH_SECRET`
+##### `PROXY_USERNAME_SECRET`, `PROXY_PASSWORD_SECRET`, and `VPN_AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
 See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
+
+### VPN Authentication
+To provide the VPN user and password credentials, create a file called `passfile` in the config folder being mounted, right next to the vpn .conf (or .ovpn) file.
+
+In the passfile, enter the username in the first line and password in the second line. For example:
+```
+gilbert
+p@sswd123
+```
+Now in the vpn configuration file, such as my_vpn.ovpn, create a new line and enter the following:
+```
+auth-user-pass passfile
+```
+That should be enough. You can refer to this link for more details: https://help.yeastar.com/en/s-series/topic/openvpn-username-password-authentication.html#openvpn-create-account-password-for-each-client__section_uyg_sps_33b
+
 
 ### Using with other containers
 Once you have your `openvpn-client` container up and running, you can tell other containers to use `openvpn-client`'s network stack which gives them the ability to utilize the VPN tunnel.
