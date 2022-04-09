@@ -72,6 +72,10 @@ killSwitch:
   # -- The on/off status of the network kill switch.
   enabled: true
 
+keepDNSUnchanged:
+  # -- Keep existing DNS configuration
+  enabled: false
+
 configFiles:
   # -- The OpenVPN config file to use. If this is unset, the first file with the extension `.conf` will be used.
   openVPNConfig: ""
