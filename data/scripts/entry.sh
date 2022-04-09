@@ -61,10 +61,12 @@ config_file_modified="${config_file_original}.modified"
 echo "Creating $config_file_modified and making required changes to that file."
 grep -Ev "(^up\s|^down\s)" "$config_file_original" > "$config_file_modified"
 
-# These configuration file changes are required by Alpine.
+# These configuration file changes are required by Alpine. 
+# Also replace carriage return char for conversion of CRLF to LF line endings
 sed -i \
     -e 's/^proto udp$/proto udp4/' \
     -e 's/^proto tcp$/proto tcp4/' \
+    -e 's/\r$//' \
     "$config_file_modified"
 
 if [[ "$KEEP_DNS_UNCHANGED" != "yes" ]]; then 
