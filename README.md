@@ -66,7 +66,7 @@ services:
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
 | `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
-| `KEEP_DNS_UNCHAGED` | `off` | If `off`, the VPN server you connect to might override the DNS server used by the container. If `on`, the container will always use the DNS settings it had before connecting to the server. Usually, containers use the Docker internal DNS server by default. It allows to resolve IP addreses from container names, service names and Docker-specific names such as `host.docker.internal`. If DNS server is overriden, you won't be able to resolve such names. |
+| `KEEP_DNS_UNCHANGED` | `off` | If `off`, the VPN server you connect to might override the DNS server used by the container. If `on`, the container will always use the DNS settings it had before connecting to the server. Usually, containers use the Docker internal DNS server by default. It allows to resolve IP addreses from container names, service names and Docker-specific names such as `host.docker.internal`. If DNS server is overriden, you won't be able to resolve such names. |
 | `KILL_SWITCH` | `on` | The on/off status of the network kill switch. |
 | `LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
 | `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
