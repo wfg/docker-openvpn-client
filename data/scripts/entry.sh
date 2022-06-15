@@ -121,18 +121,18 @@ if is_enabled "$KILL_SWITCH" ; then
 
         if [[ $address =~ $ip_regex ]]; then
             printf '%s\n' \
-                "add rule inet killswitch outgoing oifname eth0 ip daddr $address $protocol dport $port accept" '' >> $nftables_config_file
+                "add rule inet killswitch outgoing oifname eth0 ip daddr $address $protocol dport $port accept" >> $nftables_config_file
         else
             for ip in $(dig -4 +short "$address"); do
                 printf '%s\n' \
-                    "add rule inet killswitch outgoing oifname eth0 ip daddr $ip $protocol dport $port accept" '' >> $nftables_config_file
+                    "add rule inet killswitch outgoing oifname eth0 ip daddr $ip $protocol dport $port accept" >> $nftables_config_file
                 printf "%s %s\n" "$ip" "$address" >> /etc/hosts
             done
         fi
     done <<< "$remotes"
 
     printf '%s\n' \
-        '# allow traffic over the VPN interface' \
+        '' '# allow traffic over the VPN interface' \
         "add rule inet killswitch incoming iifname tun0 accept" \
         "add rule inet killswitch outgoing oifname tun0 accept" >> $nftables_config_file
 
