@@ -7,7 +7,7 @@ until ip link show tun0 2>&1 | grep -qv "does not exist"; do
 done
 
 get_addr() {
-   ip a show dev "$1" | grep inet | cut -d " " -f 6 | cut -d "/" -f 1 | tr '\n' ' ' | cut -d " " -f 1
+   ip address show "$1" | grep 'inet ' | awk '{split($2, inet, "/"); print inet[1]}'
 } 
 
 addr_eth=${LISTEN_ON:-$(get_addr eth0)}
