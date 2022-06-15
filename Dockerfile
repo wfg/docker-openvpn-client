@@ -1,28 +1,27 @@
-FROM alpine:3.15
-
-ARG IMAGE_VERSION
-ARG BUILD_DATE
-
-LABEL org.opencontainers.image.created="$BUILD_DATE"
-LABEL org.opencontainers.image.source="github.com/wfg/docker-openvpn-client"
-LABEL org.opencontainers.image.version="$IMAGE_VERSION"
-
-ENV KILL_SWITCH=on \
-    VPN_LOG_LEVEL=3 \
-    HTTP_PROXY=off \
-    SOCKS_PROXY=off
+FROM alpine:3.16
 
 RUN apk add --no-cache \
         bash \
         bind-tools \
         dante-server \
+        nftables \
         openvpn \
         tinyproxy
 
-RUN mkdir -p /data/vpn
+COPY data/ /data/
 
-COPY data/ /data
+ENV KILL_SWITCH=on
+ENV USE_VPN_DNS=on
+ENV VPN_LOG_LEVEL=3
+
+ARG BUILD_DATE
+ARG IMAGE_VERSION
+
+LABEL build-date=$BUILD_DATE
+LABEL image-version=$IMAGE_VERSION
 
 HEALTHCHECK CMD ping -c 3 1.1.1.1 || exit 1
 
-ENTRYPOINT ["/data/scripts/entry.sh"]
+WORKDIR /data
+
+ENTRYPOINT [ "scripts/entry.sh" ]

@@ -1,7 +1,7 @@
 # OpenVPN Client for Docker
 ## What is this and what does it do?
 [`ghcr.io/wfg/openvpn-client`](https://github.com/users/wfg/packages/container/package/openvpn-client) is a containerized OpenVPN client.
-It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason.
+It has a kill switch built with `nftables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason.
 It also includes an HTTP proxy server ([Tinyproxy](https://tinyproxy.github.io/)) and a SOCKS proxy server ([Dante](https://www.inet.no/dante/index.html)).
 This allows hosts and non-containerized applications to use the VPN without having to run VPN clients on those hosts.
 
@@ -13,10 +13,6 @@ If you find something that doesn't work or have an idea for a new feature, issue
 ## Why?
 Having a containerized VPN client lets you use container networking to easily choose which applications you want using the VPN instead of having to set up split tunnelling.
 It also keeps you from having to install an OpenVPN client on the underlying host.
-
-The idea for this image came from a similar project by [qdm12](https://github.com/qdm12) that has since evolved into something bigger and more complex than I wanted to use.
-I decided to dissect it and take it in my own direction.
-I plan to keep everything here well-documented so this is not only a learning experience for me, but also anyone else that uses it.
 
 ## How do I use it?
 ### Getting the image
@@ -62,22 +58,28 @@ services:
     restart: unless-stopped
 ```
 
-#### Environment variables (alphabetical)
+#### Environment variables
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
-| `HTTP_PROXY` | `off` | The on/off status of Tinyproxy, the built-in HTTP proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 8080. |
-| `KEEP_DNS_UNCHANGED` | `off` | If `off`, the VPN server you connect to might override the DNS server used by the container. If `on`, the container will always use the DNS settings it had before connecting to the server. Usually, containers use the Docker internal DNS server by default. It allows to resolve IP addreses from container names, service names and Docker-specific names such as `host.docker.internal`. If DNS server is overriden, you won't be able to resolve such names. |
-| `KILL_SWITCH` | `on` | The on/off status of the network kill switch. |
-| `LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
-| `PROXY_PASSWORD` | | Credentials for accessing the proxies. If `PROXY_PASSWORD` is specified, you must also specify `PROXY_USERNAME`. |
-| `PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_PASSWORD_SECRET` is specified, you must also specify `PROXY_USERNAME_SECRET`. |
-| `PROXY_USERNAME` | | Credentials for accessing the proxies. If `PROXY_USERNAME` is specified, you must also specify `PROXY_PASSWORD`. |
-| `PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `PROXY_USERNAME_SECRET` is specified, you must also specify `PROXY_PASSWORD_SECRET`. |
-| `SOCKS_PROXY` | `off` | The on/off status of Dante, the built-in SOCKS proxy server. To enable, set to `on`. Any other value (including unset) will cause the proxy server to not start. It listens on port 1080. |
-| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
+| `USE_VPN_DNS` | `on` | Whether or not to use the DNS servers pushed from the VPN server. It's best to leave this enabled unless you have a good reason to disable it. |
+| `VPN_CONFIG_FILE` | | The OpenVPN configuration file to use. If unset, the `VPN_CONFIG_PATTERN` is used. |
+| `VPN_CONFIG_PATTERN` | | The search pattern to use when looking for an OpenVPN configuration file. If unset, the search will include `*.conf` and `*.ovpn`. |
 | `VPN_AUTH_SECRET` | | Docker secret that contain the credentials for accessing the VPN. |
-| `VPN_CONFIG_FILE` | | The OpenVPN config file to use. If this is unset, the first file with the extension .conf will be used. |
-| `VPN_LOG_LEVEL` | `3` | OpenVPN verbosity (`1`-`11`) |
+| `VPN_LOG_LEVEL` | `3` | OpenVPN logging verbosity (`1`-`11`) |
+| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
+| `KILL_SWITCH` | `on` | Whether or not to enable the network kill switch. |
+| `HTTP_PROXY` | | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080. |
+| `HTTP_PROXY_USERNAME` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`. |
+| `HTTP_PROXY_PASSWORD` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`. |
+| `HTTP_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME_SECRET` is specified, you should also specify `HTTP_PROXY_PASSWORD_SECRET`. |
+| `HTTP_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD_SECRET` is specified, you should also specify `HTTP_PROXY_USERNAME_SECRET`. |
+| `SOCKS_PROXY` | | Whether or not to enable the built-in SOCKS proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 1080. |
+| `SOCKS_LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
+| `SOCKS_PROXY_USERNAME` | | Credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME` is specified, you should also specify `SOCKS_PROXY_PASSWORD`. |
+| `SOCKS_PROXY_PASSWORD` | | Credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD` is specified, you should also specify `SOCKS_PROXY_USERNAME`. |
+| `SOCKS_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME_SECRET` is specified, you should also specify `SOCKS_PROXY_PASSWORD_SECRET`. |
+| `SOCKS_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD_SECRET` is specified, you should also specify `SOCKS_PROXY_USERNAME_SECRET`. |
+"Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
 ###### `HTTP_PROXY` and `SOCKS_PROXY`
@@ -90,24 +92,9 @@ ports:
   - <host_port>:1080
 ```
 
-##### `PROXY_USERNAME_SECRET`, `PROXY_PASSWORD_SECRET`, and `VPN_AUTH_SECRET`
+##### `*_PROXY_USERNAME_SECRET`, `*_PROXY_PASSWORD_SECRET`, and `VPN_AUTH_SECRET`
 Compose has support for [Docker secrets](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
 See the [Compose file](docker-compose.yml) in this repository for example usage of passing proxy credentials as Docker secrets.
-
-### VPN Authentication
-To provide the VPN user and password credentials, create a file called `passfile` in the config folder being mounted, right next to the vpn .conf (or .ovpn) file.
-
-In the passfile, enter the username in the first line and password in the second line. For example:
-```
-gilbert
-p@sswd123
-```
-Now in the vpn configuration file, such as my_vpn.ovpn, create a new line and enter the following:
-```
-auth-user-pass passfile
-```
-That should be enough. You can refer to this link for more details: https://help.yeastar.com/en/s-series/topic/openvpn-username-password-authentication.html#openvpn-create-account-password-for-each-client__section_uyg_sps_33b
-
 
 ### Using with other containers
 Once you have your `openvpn-client` container up and running, you can tell other containers to use `openvpn-client`'s network stack which gives them the ability to utilize the VPN tunnel.
@@ -137,3 +124,21 @@ You should see an IP address owned by your VPN provider.
 ```bash
 docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfig.me
 ```
+
+### Troubleshooting
+#### VPN authentication
+Your OpenVPN configuration file may not come with authentication baked in.
+To provide OpenVPN the necessary credentials, create a file (any name will work, but this example will use `credentials.txt`) next to the OpenVPN configuration file with your username on the first line and your password on the second line.
+
+For example:
+```
+vpn_username
+vpn_password
+```
+
+In the OpenVPN configuration file, add the following line:
+```
+auth-user-pass credentials.txt
+```
+
+This will tell OpenVPN to read `credentials.txt` whenever it needs credentials.

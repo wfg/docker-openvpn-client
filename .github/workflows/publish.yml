@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
   IMAGE_NAME: openvpn-client
@@ -13,47 +13,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+    - run: cat build-variables >> $GITHUB_ENV
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+    - uses: docker/setup-qemu-action@v2
 
-      - name: Log in to registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - uses: docker/setup-buildx-action@v2
 
-      - name: Create tags
-        id: tags
-        uses: docker/metadata-action@v3
-        with:
-          images: ghcr.io/wfg/openvpn-client
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+    - uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create build args
-        id: build-args
-        run: |
-          ref=${{ github.ref }}
-          vpatch=${ref##refs/*/}
-          patch=${vpatch#v}
-          echo "::set-output name=date::$(date --utc --iso-8601=seconds)"
-          echo "::set-output name=version::$patch"
+    - id: tags
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.IMAGE_NAME }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
-          tags: ${{ steps.tags.outputs.tags }}
-          build-args: |
-            BUILD_DATE=${{ steps.build-args.outputs.date }}
-            IMAGE_VERSION=${{ steps.build-args.outputs.version }}
-          push: true
+    - id: build-args
+      run: |
+        ref=${{ github.ref }}
+        vpatch=${ref##refs/*/}
+        patch=${vpatch#v}
+        echo "::set-output name=date::$(date --utc --iso-8601=seconds)"
+        echo "::set-output name=version::$patch"
+
+    - uses: docker/build-push-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+        tags: ${{ steps.tags.outputs.tags }}
+        build-args: |
+          BUILD_DATE=${{ steps.build-args.outputs.date }}
+          IMAGE_VERSION=${{ steps.build-args.outputs.version }}
+        push: true
