@@ -8,8 +8,8 @@ done
 
 proxy_config_file=config/http-proxy.conf
 
-addr_eth0=$(ip address show eth0 | grep 'inet' | awk '{split($2, inet, "/"); print inet[1]}')
-addr_tun0=$(ip address show tun0 | grep 'inet' | awk '{split($2, inet, "/"); print inet[1]}')
+addr_eth0=$(ip address show eth0 | grep 'inet ' | awk '{split($2, inet, "/"); print inet[1]}')
+addr_tun0=$(ip address show tun0 | grep 'inet ' | awk '{split($2, inet, "/"); print inet[1]}')
 sed -i \
     -e "/Listen/c Listen $addr_eth0" \
     -e "/Bind/c Bind $addr_tun0" \
