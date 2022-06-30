@@ -3,6 +3,17 @@
 set -e
 
 
+cleanup() {
+    if [[ $openvpn_child ]]; then
+        kill SIGTERM "$openvpn_child"
+    fi
+
+    sleep 0.5
+    rm -f "$modified_config_file"
+    echo "info: exiting"
+    exit 0
+}
+
 is_enabled() {
     [[ ${1,,} =~ ^(true|t|yes|y|1|on|enable|enabled)$ ]]
 }
@@ -64,6 +75,7 @@ echo "info: original configuration file: $original_config_file"
 
 # Create a new configuration file to modify so the original is left untouched.
 modified_config_file=vpn/openvpn.$(tr -dc A-Za-z0-9 </dev/urandom | head -c8).conf
+trap cleanup SIGTERM
 
 echo "info: modified configuration file: $modified_config_file"
 grep -Ev '(^up\s|^down\s)' "$original_config_file" > "$modified_config_file"
@@ -73,76 +85,126 @@ sed -i 's/\r$//g' "$modified_config_file"
 
 
 default_gateway=$(ip -4 route | grep 'default via' | awk '{print $3}')
-if is_enabled "$KILL_SWITCH" ; then
-    echo "info: kill switch is on"
 
-    nftables_config_file=config/nftables.conf
+case "$KILL_SWITCH" in
+    'iptables')
+        echo "info: kill switch is using iptables"
 
-    local_subnet=$(ip -4 route | grep 'scope link' | awk '{print $1}')
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        iptables -A INPUT -i lo -j ACCEPT
+        iptables -A OUTPUT -o lo -j ACCEPT
 
-    printf '%s\n' \
-        '#!/usr/bin/nft' '' \
-        'flush ruleset' '' \
-        '# base ruleset' \
-        'add table inet killswitch' '' \
-        'add chain inet killswitch incoming { type filter hook input priority 0; policy drop; }' \
-        'add rule inet killswitch incoming ct state established,related accept' \
-        'add rule inet killswitch incoming iifname lo accept' '' \
-        'add chain inet killswitch outgoing { type filter hook output priority 0; policy drop; }' \
-        'add rule inet killswitch outgoing ct state established,related accept' \
-        'add rule inet killswitch outgoing oifname lo accept' '' > $nftables_config_file
+        local_subnet=$(ip -4 route | grep 'scope link' | awk '{print $1}')
+        iptables -A INPUT -s "$local_subnet" -j ACCEPT
+        iptables -A OUTPUT -d "$local_subnet" -j ACCEPT
 
-    printf '%s\n' \
-        '# allow traffic to/from the Docker subnet' \
-        "add rule inet killswitch incoming ip saddr $local_subnet accept" \
-        "add rule inet killswitch outgoing ip daddr $local_subnet accept" '' >> $nftables_config_file
-
-    if [[ $SUBNETS ]]; then
-        printf '# allow traffic to/from the specified subnets\n' >> $nftables_config_file
-        for subnet in ${SUBNETS//,/ }; do
-            ip route add "$subnet" via "$default_gateway" dev eth0
-            printf '%s\n' \
-                "add rule inet killswitch incoming ip saddr $subnet accept" \
-                "add rule inet killswitch outgoing ip daddr $subnet accept" '' >> $nftables_config_file
-        done
-    fi
-
-    global_port=$(grep "^port " "$modified_config_file" | awk '{print $2}')
-    global_protocol=$(grep "^proto " "$modified_config_file" | awk '{print $2}')  # {$2 = substr($2, 1, 3)} 2
-    remotes=$(grep "^remote " "$modified_config_file" | awk '{print $2, $3, $4}')
-
-    printf '# allow traffic to the VPN server(s)\n' >> $nftables_config_file
-    ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
-    while IFS= read -r line; do
-        IFS=' ' read -ra remote <<< "$line"
-        address=${remote[0]}
-        port=${remote[1]:-${global_port:-1194}}
-        protocol=${remote[2]:-${global_protocol:-udp}}
-
-        if [[ $address =~ $ip_regex ]]; then
-            printf '%s\n' \
-                "add rule inet killswitch outgoing oifname eth0 ip daddr $address $protocol dport $port accept" >> $nftables_config_file
-        else
-            for ip in $(dig -4 +short "$address"); do
-                printf '%s\n' \
-                    "add rule inet killswitch outgoing oifname eth0 ip daddr $ip $protocol dport $port accept" >> $nftables_config_file
-                printf "%s %s\n" "$ip" "$address" >> /etc/hosts
+        if [[ $SUBNETS ]]; then
+            for subnet in ${SUBNETS//,/ }; do
+                ip route add "$subnet" via "$default_gateway" dev eth0
+                iptables -A INPUT -s "$subnet" -j ACCEPT
+                iptables -A OUTPUT -d "$subnet" -j ACCEPT
             done
         fi
-    done <<< "$remotes"
 
-    printf '%s\n' \
-        '' '# allow traffic over the VPN interface' \
-        "add rule inet killswitch incoming iifname tun0 accept" \
-        "add rule inet killswitch outgoing oifname tun0 accept" >> $nftables_config_file
+        global_port=$(grep "^port " "$modified_config_file" | awk '{print $2}')
+        global_protocol=$(grep "^proto " "$modified_config_file" | awk '{print $2}')  # {$2 = substr($2, 1, 3)} 2
+        remotes=$(grep "^remote " "$modified_config_file" | awk '{print $2, $3, $4}')
+        ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
+        while IFS= read -r line; do
+            IFS=' ' read -ra remote <<< "$line"
+            address=${remote[0]}
+            port=${remote[1]:-${global_port:-1194}}
+            protocol=${remote[2]:-${global_protocol:-udp}}
 
-    nft -f $nftables_config_file
-else
-    echo "info: kill switch is off"
-    for subnet in ${SUBNETS//,/ }; do
-        ip route add "$subnet" via "$default_gateway" dev eth0
-    done
-fi
+            if [[ $address =~ $ip_regex ]]; then
+                iptables -A OUTPUT -o eth0 -d "$address" -p "$protocol" --dport "$port" -j ACCEPT
+            else
+                for ip in $(dig -4 +short "$address"); do
+                    iptables -A OUTPUT -o eth0 -d "$ip" -p "$protocol" --dport "$port" -j ACCEPT
+                    printf "%s %s\n" "$ip" "$address" >> /etc/hosts
+                done
+            fi
+        done <<< "$remotes"
+        iptables -A INPUT -i tun0 -j ACCEPT
+        iptables -A OUTPUT -o tun0 -j ACCEPT
+        iptables -P INPUT DROP
+        iptables -P OUTPUT DROP
+        iptables -P FORWARD DROP
+        iptables-save > config/iptables.conf
+        ;;
+
+    'nftables')
+        echo "info: kill switch is using nftables"
+        nftables_config_file=config/nftables.conf
+
+        printf '%s\n' \
+            '#!/usr/bin/nft' '' \
+            'flush ruleset' '' \
+            '# base ruleset' \
+            'add table inet killswitch' '' \
+            'add chain inet killswitch incoming { type filter hook input priority 0; policy drop; }' \
+            'add rule inet killswitch incoming ct state established,related accept' \
+            'add rule inet killswitch incoming iifname lo accept' '' \
+            'add chain inet killswitch outgoing { type filter hook output priority 0; policy drop; }' \
+            'add rule inet killswitch outgoing ct state established,related accept' \
+            'add rule inet killswitch outgoing oifname lo accept' '' > $nftables_config_file
+
+        local_subnet=$(ip -4 route | grep 'scope link' | awk '{print $1}')
+        printf '%s\n' \
+            '# allow traffic to/from the Docker subnet' \
+            "add rule inet killswitch incoming ip saddr $local_subnet accept" \
+            "add rule inet killswitch outgoing ip daddr $local_subnet accept" '' >> $nftables_config_file
+
+        if [[ $SUBNETS ]]; then
+            printf '# allow traffic to/from the specified subnets\n' >> $nftables_config_file
+            for subnet in ${SUBNETS//,/ }; do
+                ip route add "$subnet" via "$default_gateway" dev eth0
+                printf '%s\n' \
+                    "add rule inet killswitch incoming ip saddr $subnet accept" \
+                    "add rule inet killswitch outgoing ip daddr $subnet accept" '' >> $nftables_config_file
+            done
+        fi
+
+        global_port=$(grep "^port " "$modified_config_file" | awk '{print $2}')
+        global_protocol=$(grep "^proto " "$modified_config_file" | awk '{print $2}')  # {$2 = substr($2, 1, 3)} 2
+        remotes=$(grep "^remote " "$modified_config_file" | awk '{print $2, $3, $4}')
+
+        printf '# allow traffic to the VPN server(s)\n' >> $nftables_config_file
+        ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
+        while IFS= read -r line; do
+            IFS=' ' read -ra remote <<< "$line"
+            address=${remote[0]}
+            port=${remote[1]:-${global_port:-1194}}
+            protocol=${remote[2]:-${global_protocol:-udp}}
+
+            if [[ $address =~ $ip_regex ]]; then
+                printf '%s\n' \
+                    "add rule inet killswitch outgoing oifname eth0 ip daddr $address $protocol dport $port accept" >> $nftables_config_file
+            else
+                for ip in $(dig -4 +short "$address"); do
+                    printf '%s\n' \
+                        "add rule inet killswitch outgoing oifname eth0 ip daddr $ip $protocol dport $port accept" >> $nftables_config_file
+                    printf "%s %s\n" "$ip" "$address" >> /etc/hosts
+                done
+            fi
+        done <<< "$remotes"
+
+        printf '%s\n' \
+            '' '# allow traffic over the VPN interface' \
+            "add rule inet killswitch incoming iifname tun0 accept" \
+            "add rule inet killswitch outgoing oifname tun0 accept" >> $nftables_config_file
+
+        nft -f $nftables_config_file
+        ;;
+
+    *)
+        echo "info: kill switch is off"
+        for subnet in ${SUBNETS//,/ }; do
+            ip route add "$subnet" via "$default_gateway" dev eth0
+        done
+        ;;
+
+esac
 
 if is_enabled "$HTTP_PROXY" ; then
     scripts/run-http-proxy.sh &
@@ -174,4 +236,7 @@ if [[ $VPN_AUTH_SECRET ]]; then
     openvpn_args+=("--auth-user-pass" "/run/secrets/$VPN_AUTH_SECRET")
 fi
 
-exec openvpn "${openvpn_args[@]}"
+openvpn "${openvpn_args[@]}" &
+openvpn_child=$!
+
+wait $openvpn_child

@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 3.1.0 - 2022-06-30
+### Changed
+- `KILL_SWITCH` now requires `iptables` or `nftables` to be enabled. It defaults to `iptables`. See documentation for more information.
+
+### Added
+- Modified OpenVPN configuration file cleanup function.
+
 ## Version 3.0.0 - 2022-06-14
 ### Changed
 - Refactored scripts

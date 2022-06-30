@@ -4,13 +4,15 @@ RUN apk add --no-cache \
         bash \
         bind-tools \
         dante-server \
-        nftables \
+        iptables \
         openvpn \
+        nftables \
+        shadow \
         tinyproxy
 
 COPY data/ /data/
 
-ENV KILL_SWITCH=on
+ENV KILL_SWITCH=iptables
 ENV USE_VPN_DNS=on
 ENV VPN_LOG_LEVEL=3
 

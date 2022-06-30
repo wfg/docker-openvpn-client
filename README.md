@@ -67,7 +67,7 @@ services:
 | `VPN_AUTH_SECRET` | | Docker secret that contain the credentials for accessing the VPN. |
 | `VPN_LOG_LEVEL` | `3` | OpenVPN logging verbosity (`1`-`11`) |
 | `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
-| `KILL_SWITCH` | `on` | Whether or not to enable the network kill switch. |
+| `KILL_SWITCH` | `iptables` | Which packet filterer to use for the kill switch. This value likely depends on your underlying host. Recommended to leave default unless you have problems. Acceptable values are `iptables` and `nftables`. To disable the kill switch, set to any other value. |
 | `HTTP_PROXY` | | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080. |
 | `HTTP_PROXY_USERNAME` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`. |
 | `HTTP_PROXY_PASSWORD` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`. |
@@ -126,6 +126,13 @@ docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfi
 ```
 
 ### Troubleshooting
+#### `can't initialize iptables`
+If you see a message like the below in your logs, try setting `KILL_SWITCH` to `nftables`:
+```
+iptables v1.8.8 (legacy): can't initialize iptables table `filter': Table does not exist (do you need to insmod?)
+Perhaps iptables or your kernel needs to be upgraded.
+```
+
 #### VPN authentication
 Your OpenVPN configuration file may not come with authentication baked in.
 To provide OpenVPN the necessary credentials, create a file (any name will work, but this example will use `credentials.txt`) next to the OpenVPN configuration file with your username on the first line and your password on the second line.
