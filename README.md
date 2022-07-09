@@ -82,6 +82,10 @@ services:
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
+###### `SUBNETS`
+If you intend on connecting to containers that use the OpenVPN container's network stack (which you probably do), **you will probably want to use this variable**.
+Regardless of whether or not you're using the kill switch, the entrypoint script also adds routes to each of the `SUBNETS` to allow network connectivity from outside of Docker.
+
 ###### `HTTP_PROXY` and `SOCKS_PROXY`
 If enabling the the proxy server(s), you'll want to publish the appropriate port(s) in order to access the server(s).
 To do that using `docker run`, add `-p <host_port>:8080` and/or `-p <host_port>:1080` where `<host_port>` is whatever port you want to use on the host.
