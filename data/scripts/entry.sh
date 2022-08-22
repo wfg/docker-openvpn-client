@@ -85,14 +85,25 @@ sed -i 's/\r$//g' "$modified_config_file"
 
 
 default_gateway=$(ip -4 route | grep 'default via' | awk '{print $3}')
+resolvers=$(grep -E '^nameserver' /etc/resolv.conf | awk '{print $2}')
 
 case "$KILL_SWITCH" in
     'iptables')
         echo "info: kill switch is using iptables"
 
+        iptables -P INPUT DROP
+        iptables -P OUTPUT DROP
+        iptables -P FORWARD DROP
+
         iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
         iptables -A INPUT -i lo -j ACCEPT
         iptables -A OUTPUT -o lo -j ACCEPT
+
+        # temporarily allow access to dns resolvers to look up vpn endpoint fqdns
+        for resolver in $resolvers; do
+            iptables -A OUTPUT -d "$resolver" -p udp --dport 53 -j ACCEPT
+            iptables -A OUTPUT -d "$resolver" -p tcp --dport 53 -j ACCEPT
+        done
 
         local_subnet=$(ip -4 route | grep 'scope link' | awk '{print $1}')
         iptables -A INPUT -s "$local_subnet" -j ACCEPT
@@ -127,9 +138,13 @@ case "$KILL_SWITCH" in
         done <<< "$remotes"
         iptables -A INPUT -i tun0 -j ACCEPT
         iptables -A OUTPUT -o tun0 -j ACCEPT
-        iptables -P INPUT DROP
-        iptables -P OUTPUT DROP
-        iptables -P FORWARD DROP
+
+        # revoke access to dns resolvers
+        for resolver in $resolvers; do
+            iptables -D OUTPUT -d "$resolver" -p udp --dport 53 -j ACCEPT
+            iptables -D OUTPUT -d "$resolver" -p tcp --dport 53 -j ACCEPT
+        done
+
         iptables-save > config/iptables.conf
         ;;
 
