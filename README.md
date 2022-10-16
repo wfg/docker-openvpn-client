@@ -61,24 +61,9 @@ services:
 #### Environment variables
 | Variable | Default (blank is unset) | Description |
 | --- | --- | --- |
-| `USE_VPN_DNS` | `on` | Whether or not to use the DNS servers pushed from the VPN server. It's best to leave this enabled unless you have a good reason to disable it. |
-| `VPN_CONFIG_FILE` | | The OpenVPN configuration file to use. If unset, the `VPN_CONFIG_PATTERN` is used. |
-| `VPN_CONFIG_PATTERN` | | The search pattern to use when looking for an OpenVPN configuration file. If unset, the search will include `*.conf` and `*.ovpn`. |
-| `VPN_AUTH_SECRET` | | Docker secret that contain the credentials for accessing the VPN. |
-| `VPN_LOG_LEVEL` | `3` | OpenVPN logging verbosity (`1`-`11`) |
-| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
-| `KILL_SWITCH` | `iptables` | Which packet filterer to use for the kill switch. This value likely depends on your underlying host. Recommended to leave default unless you have problems. Acceptable values are `iptables` and `nftables`. To disable the kill switch, set to any other value. |
-| `HTTP_PROXY` | | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080. |
-| `HTTP_PROXY_USERNAME` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`. |
-| `HTTP_PROXY_PASSWORD` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`. |
-| `HTTP_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME_SECRET` is specified, you should also specify `HTTP_PROXY_PASSWORD_SECRET`. |
-| `HTTP_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD_SECRET` is specified, you should also specify `HTTP_PROXY_USERNAME_SECRET`. |
-| `SOCKS_PROXY` | | Whether or not to enable the built-in SOCKS proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 1080. |
-| `SOCKS_LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
-| `SOCKS_PROXY_USERNAME` | | Credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME` is specified, you should also specify `SOCKS_PROXY_PASSWORD`. |
-| `SOCKS_PROXY_PASSWORD` | | Credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD` is specified, you should also specify `SOCKS_PROXY_USERNAME`. |
-| `SOCKS_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME_SECRET` is specified, you should also specify `SOCKS_PROXY_PASSWORD_SECRET`. |
-| `SOCKS_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD_SECRET` is specified, you should also specify `SOCKS_PROXY_USERNAME_SECRET`. |
+| `ALLOWED_SUBNETS` |  | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
+| `AUTH_SECRET` | | Docker secret that contains the credentials for accessing the VPN. |
+| `CONFIG_FILE` | | The OpenVPN configuration file or search pattern. If unset, a random `.conf` or `.ovpn` file will be selected. |
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
