@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 iptables --insert OUTPUT \
     ! --out-interface tun0 \
@@ -19,14 +21,14 @@ done
 # Punch holes in the firewall for the OpenVPN server addresses
 # $config is set by OpenVPN:
 #   "Name of first --config file. Set on program initiation and reset on SIGHUP."
-global_port=$(awk '$1 == "port" { print $2 }' "${config:?}")
-global_protocol=$(awk '$1 == "proto" { print $2 }' "${config:?}")
-remotes=$(awk '$1 == "remote" { print $2, $3, $4 }' "${config:?}")
+global_port=$(awk '$1 == "port" { print $2 }' "${config:?"config file not found by kill switch"}")
+global_protocol=$(awk '$1 == "proto" { print $2 }' "${config:?"config file not found by kill switch"}")
+remotes=$(awk '$1 == "remote" { print $2, $3, $4 }' "${config:?"config file not found by kill switch"}")
 ip_regex='^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$'
 while IFS= read -r line; do
     # Read a comment-stripped version of the line
     # Fixes #84
-    IFS=' ' read -ra remote <<< "${line%%\#*}"
+    IFS=" " read -ra remote <<< "${line%%\#*}"
     address=${remote[0]}
     port=${remote[1]:-${global_port:-1194}}
     protocol=${remote[2]:-${global_protocol:-udp}}

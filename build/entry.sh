@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 cleanup() {
     kill TERM "$openvpn_pid"
@@ -19,7 +21,7 @@ else
 fi
 
 if [[ -z $config_file ]]; then
-    >&2 echo 'no openvpn configuration file found'
+    echo "no openvpn configuration file found" >&2
     exit 1
 fi
 
