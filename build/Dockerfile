@@ -9,4 +9,6 @@ RUN apk add --no-cache \
 
 COPY . /usr/local/bin
 
+ENV KILL_SWITCH=on
+
 ENTRYPOINT [ "entry.sh" ]
