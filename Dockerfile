@@ -8,7 +8,8 @@ RUN apk add --no-cache \
         openvpn \
         nftables \
         shadow \
-        tinyproxy
+        tinyproxy \ 
+        tzdata
 
 COPY data/ /data/
 
