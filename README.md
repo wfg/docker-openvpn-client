@@ -99,16 +99,15 @@ services:
 | `SOCKS_PROXY_USERNAME_SECRET` |                          | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME_SECRET` is specified, you should also specify `SOCKS_PROXY_PASSWORD_SECRET`.                                                                                     |
 | `SOCKS_PROXY_PASSWORD_SECRET` |                          | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD_SECRET` is specified, you should also specify `SOCKS_PROXY_USERNAME_SECRET`.                                                                                     |
 | `RETRY`                       | `5`                      | Seconds to wait between connection attempts - see `openvpn`, first argument to `--connect-retry`.                                                                                                                                                                |
-| `MAX_RETRY`                   | `60`                     | Repeated reconnection attempts are slowed down after 5 retries per remote by doubling the wait time after each unsuccessful attempt.  The script caps at `60` - see `openvpn`, second argument to `--connect-retry`.                                             |
-| `SERVER_POLL`                 | `120`                    | When connecting to a remote server do not wait for more than n seconds for a response before trying the next server - see `openvpn`, `--server-poll-timeout`.                                                                                                    |
-| `PING`                        | `15`                     | Ping remote over the TCP/UDP control channel if no packets have been sent for at least `n` seconds - see `openvpn`, `--ping`                                                                                                                                     |
-| `PING_RESTART`                | `120`                    | Similar to `--ping-exit`, but trigger a `SIGUSR1` restart after n seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                       |
+| `MAX_RETRY`                   | `60`                     | Repeated reconnection attempts are slowed down after 5 retries per remote by doubling the wait time after each unsuccessful attempt.  The script caps at `60` seconds - see `openvpn`, second argument to `--connect-retry`.                                     |
+| `SERVER_POLL`                 | `120`                    | When connecting to a remote server do not wait for more than `n` seconds for a response before trying the next server - see `openvpn`, `--server-poll-timeout`.                                                                                                  |
+| `PING`                        | `15`                     | Ping remote over the TCP/UDP control channel if no packets have been sent for at least `n` seconds - see `openvpn`, `--ping`.                                                                                                                                    |
+| `PING_RESTART`                | `120`                    | Similar to `--ping-exit`, but trigger a `SIGUSR1` restart after `n` seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                     |
 | `TAP`                         | `eth0`                   | Use this option to remap the script's `eth0` device.                                                                                                                                                                                                             |
 | `USE_FAST_IO`                 |                          | (Experimental) Optimize TUN/TAP/UDP I/O writes - see `openvpn`, `--fast-io`.                                                                                                                                                                                     |
 | `SNDBUF`                      |                          | Set the TCP/UDP socket send buffer size - see `openvpn`, `--sndbuf`.                                                                                                                                                                                             |
 | `RCVBUF`                      |                          | Set the TCP/UDP socket receive buffer size - see `openvpn`, `--rcvbuf`.                                                                                                                                                                                          |
-| `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve the file.  Use this option to have it saved in your VPN directory.  It is named `openvpn.XXXXXXXX.conf`.                                                |
-|                               |                          |                                                                                                                                                                                                                                                                  |
+| `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve this file.  The option saves the modified file in your VPN directory.  It is named `openvpn.XXXXXXXX.conf`.                                             |
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
@@ -169,7 +168,8 @@ The following parameters may provide some performance benefits:
 * `SNDBUF`
 * `RCVBUF`
 
-In general, run three tests in (near) isolation with one tune set.
+In general, run three tests in (near) isolation with one tune set before
+adding another.
 
 ### Tips
 
@@ -210,14 +210,12 @@ Change the permissions so only your user has read/write permissions:
 ```shell
 $ chmod 600 credentials.txt
 ```
-
 ##### Method 1 
 `run` the container with the following additional parameters:
 ```
   --env VPN_AUTH_SECRET="credentials.txt" \
   --volume <path/to/config/dir>:/run/secrets" \
 ```
-
 ##### Method 2
 In the OpenVPN configuration file, add the following line:
 ```
