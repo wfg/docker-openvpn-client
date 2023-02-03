@@ -52,7 +52,7 @@ dump_user_settings() {
    else
       log_msg "Container script 'eth0' not remapped."
    fi
-   if [[ -n "$USE_FAST_IO" ]] ; then
+   if is_enabled "$USE_FAST_IO" ; then
       log_msg "Fast IO enabled (--fast-io), a non-Windows, UDP-only switch"
    fi
    if [[ -n "$SNDBUF" ]] ; then
@@ -82,7 +82,7 @@ dump_user_settings() {
       fi
    fi
 
-   if [[ -n "$DEBUG_VPN_CONFIG_FILE" ]] ; then
+   if is_enabled "$DEBUG_VPN_CONFIG_FILE" ; then
       log_msg "Keeping modified .ovpn file with source .ovpn file"
    fi
 }
@@ -109,7 +109,7 @@ gen_working_VPN_file() {
    # Use the passed in $DEBUG_VPN_CONFIG_FILE variable to determine whether
    # the modified file is ephemeral or not.
    MOD_DIR="/tmp"
-   if [[ -n "$DEBUG_VPN_CONFIG_FILE" ]] ; then
+   if is_enabled "$DEBUG_VPN_CONFIG_FILE" ; then
       MOD_DIR="vpn"
    fi
    MODIFIED_CONFIG_FILE=$MOD_DIR/openvpn.$(tr -dc A-Za-z0-9 </dev/urandom | head -c8).conf
