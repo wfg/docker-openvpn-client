@@ -16,8 +16,7 @@ It also keeps you from having to install an OpenVPN client on the underlying hos
 
 ## How do I use it?
 ### Podman users
-Unless noted, all that is required is that you use `podman` in place of
-`docker`.
+Unless noted, below use `podman` in place of `docker`.
 
 ### Getting the image
 You can either pull it from GitHub Container Registry or build it yourself.
@@ -49,11 +48,10 @@ docker run --detach \
 
 #### `podman run`
 * Use `--privileged` - see [podman run](https://docs.podman.io/en/latest/markdown/podman-run.1.html).
-* Use `--env TAP="tap0"` to override the default `eth0` device to
-  `tap0`.  Confirm `tap0` with `podman logs openvpn-client`
+* Use `--env TAP="tap0"` to override the internal script's `eth0` with `tap0`.
 
 ```bash
-docker run --detach \
+podman run --detach \
   --privileged \
   --env TAP="tap0" \
   --name=openvpn-client \
@@ -88,7 +86,7 @@ services:
 | `VPN_LOG_LEVEL`               | `3`                      | OpenVPN logging verbosity (`1`-`11`)                                                                                                                                                                                                                             |
 | `SUBNETS`                     |                          | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel.                                                                                                                                         |
 | `KILL_SWITCH`                 | `iptables`               | Which packet filterer to use for the kill switch. This value likely depends on your underlying host. Recommended to leave default unless you have problems. Acceptable values are `iptables` and `nftables`. To disable the kill switch, set to any other value. |
-| `DIG_TIMEOUT`                 | `5`                      | When `KILL_SWITCH` is enabled, `dig`s timeout.                                                                                                                                                                                                                   |
+| `DIG_TIMEOUT`                 | `5`                      | When `KILL_SWITCH` is enabled, `dig`'s timeout.                                                                                                                                                                                                                  |
 | `HTTP_PROXY`                  |                          | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080.                                          |
 | `HTTP_PROXY_USERNAME`         |                          | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`.                                                                                                                                  |
 | `HTTP_PROXY_PASSWORD`         |                          | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`.                                                                                                                                  |
@@ -103,8 +101,8 @@ services:
 | `RETRY`                       | `5`                      | Seconds to wait between connection attempts - see `openvpn`, first argument to `--connect-retry`.                                                                                                                                                                |
 | `MAX_RETRY`                   | `60`                     | Repeated reconnection attempts are slowed down after 5 retries per remote by doubling the wait time after each unsuccessful attempt.  The script caps at `60` - see `openvpn`, second argument to `--connect-retry`.                                             |
 | `SERVER_POLL`                 | `120`                    | When connecting to a remote server do not wait for more than n seconds for a response before trying the next server - see `openvpn`, `--server-poll-timeout`.                                                                                                    |
-| `PING`                        | `15`                     | Ping remote over the TCP/UDP control channel if no packets have been sent for at least n seconds - see `openvpn`, `--ping`                                                                                                                                       |
-| `PING_RESTART`                | `120`                    | Similar to --ping-exit, but trigger a SIGUSR1 restart after n seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                           |
+| `PING`                        | `15`                     | Ping remote over the TCP/UDP control channel if no packets have been sent for at least `n` seconds - see `openvpn`, `--ping`                                                                                                                                     |
+| `PING_RESTART`                | `120`                    | Similar to `--ping-exit`, but trigger a `SIGUSR1` restart after n seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                       |
 | `TAP`                         | `eth0`                   | Use this option to remap the script's `eth0` device.                                                                                                                                                                                                             |
 | `USE_FAST_IO`                 |                          | (Experimental) Optimize TUN/TAP/UDP I/O writes - see `openvpn`, `--fast-io`.                                                                                                                                                                                     |
 | `SNDBUF`                      |                          | Set the TCP/UDP socket send buffer size - see `openvpn`, `--sndbuf`.                                                                                                                                                                                             |
@@ -171,7 +169,7 @@ The following parameters may provide some performance benefits:
 * `SNDBUF`
 * `RCVBUF`
 
-In general, run several tests with one tune set.
+In general, run three tests in (near) isolation with one tune set.
 
 ### Tips
 
