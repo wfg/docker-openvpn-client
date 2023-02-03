@@ -1,4 +1,4 @@
-# OpenVPN Client for Docker
+# OpenVPN Client for Docker/Podman
 ## What is this and what does it do?
 [`ghcr.io/wfg/openvpn-client`](https://github.com/users/wfg/packages/container/package/openvpn-client) is a containerized OpenVPN client.
 It has a kill switch built with `nftables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason.
@@ -15,6 +15,10 @@ Having a containerized VPN client lets you use container networking to easily ch
 It also keeps you from having to install an OpenVPN client on the underlying host.
 
 ## How do I use it?
+### Podman users
+Unless noted, all that is required is that you use `podman` in place of
+`docker`.
+
 ### Getting the image
 You can either pull it from GitHub Container Registry or build it yourself.
 
@@ -43,6 +47,22 @@ docker run --detach \
   ghcr.io/wfg/openvpn-client
 ```
 
+#### `podman run`
+* Use `--privileged` - see [podman run](https://docs.podman.io/en/latest/markdown/podman-run.1.html).
+* Use `--env TAP="tap0"` to override the default `eth0` device to
+  `tap0`.  Confirm `tap0` with `podman logs openvpn-client`
+
+```bash
+docker run --detach \
+  --privileged \
+  --env TAP="tap0" \
+  --name=openvpn-client \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun \
+  --volume <path/to/config/dir>:/data/vpn \
+  ghcr.io/wfg/openvpn-client
+```
+
 #### `docker-compose`
 ```yaml
 services:
@@ -59,26 +79,38 @@ services:
 ```
 
 #### Environment variables
-| Variable | Default (blank is unset) | Description |
-| --- | --- | --- |
-| `USE_VPN_DNS` | `on` | Whether or not to use the DNS servers pushed from the VPN server. It's best to leave this enabled unless you have a good reason to disable it. |
-| `VPN_CONFIG_FILE` | | The OpenVPN configuration file to use. If unset, the `VPN_CONFIG_PATTERN` is used. |
-| `VPN_CONFIG_PATTERN` | | The search pattern to use when looking for an OpenVPN configuration file. If unset, the search will include `*.conf` and `*.ovpn`. |
-| `VPN_AUTH_SECRET` | | Docker secret that contain the credentials for accessing the VPN. |
-| `VPN_LOG_LEVEL` | `3` | OpenVPN logging verbosity (`1`-`11`) |
-| `SUBNETS` | | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel. |
-| `KILL_SWITCH` | `iptables` | Which packet filterer to use for the kill switch. This value likely depends on your underlying host. Recommended to leave default unless you have problems. Acceptable values are `iptables` and `nftables`. To disable the kill switch, set to any other value. |
-| `HTTP_PROXY` | | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080. |
-| `HTTP_PROXY_USERNAME` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`. |
-| `HTTP_PROXY_PASSWORD` | | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`. |
-| `HTTP_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME_SECRET` is specified, you should also specify `HTTP_PROXY_PASSWORD_SECRET`. |
-| `HTTP_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD_SECRET` is specified, you should also specify `HTTP_PROXY_USERNAME_SECRET`. |
-| `SOCKS_PROXY` | | Whether or not to enable the built-in SOCKS proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 1080. |
-| `SOCKS_LISTEN_ON` | | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses. |
-| `SOCKS_PROXY_USERNAME` | | Credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME` is specified, you should also specify `SOCKS_PROXY_PASSWORD`. |
-| `SOCKS_PROXY_PASSWORD` | | Credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD` is specified, you should also specify `SOCKS_PROXY_USERNAME`. |
-| `SOCKS_PROXY_USERNAME_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME_SECRET` is specified, you should also specify `SOCKS_PROXY_PASSWORD_SECRET`. |
-| `SOCKS_PROXY_PASSWORD_SECRET` | | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD_SECRET` is specified, you should also specify `SOCKS_PROXY_USERNAME_SECRET`. |
+| Variable                      | Default (blank is unset) | Description                                                                                                                                                                                                                                                      |
+|-------------------------------|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `USE_VPN_DNS`                 | `on`                     | Whether or not to use the DNS servers pushed from the VPN server. It's best to leave this enabled unless you have a good reason to disable it.                                                                                                                   |
+| `VPN_CONFIG_FILE`             |                          | The OpenVPN configuration file to use. If unset, the `VPN_CONFIG_PATTERN` is used.                                                                                                                                                                               |
+| `VPN_CONFIG_PATTERN`          |                          | The search pattern to use when looking for an OpenVPN configuration file. If unset, the search will include `*.conf` and `*.ovpn`.                                                                                                                               |
+| `VPN_AUTH_SECRET`             |                          | Docker secret that contain the credentials for accessing the VPN.                                                                                                                                                                                                |
+| `VPN_LOG_LEVEL`               | `3`                      | OpenVPN logging verbosity (`1`-`11`)                                                                                                                                                                                                                             |
+| `SUBNETS`                     |                          | A list of one or more comma-separated subnets (e.g. `192.168.0.0/24,192.168.1.0/24`) to allow outside of the VPN tunnel.                                                                                                                                         |
+| `KILL_SWITCH`                 | `iptables`               | Which packet filterer to use for the kill switch. This value likely depends on your underlying host. Recommended to leave default unless you have problems. Acceptable values are `iptables` and `nftables`. To disable the kill switch, set to any other value. |
+| `DIG_TIMEOUT`                 | `5`                      | When `KILL_SWITCH` is enabled, `dig`s timeout.                                                                                                                                                                                                                   |
+| `HTTP_PROXY`                  |                          | Whether or not to enable the built-in HTTP proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 8080.                                          |
+| `HTTP_PROXY_USERNAME`         |                          | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME` is specified, you should also specify `HTTP_PROXY_PASSWORD`.                                                                                                                                  |
+| `HTTP_PROXY_PASSWORD`         |                          | Credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD` is specified, you should also specify `HTTP_PROXY_USERNAME`.                                                                                                                                  |
+| `HTTP_PROXY_USERNAME_SECRET`  |                          | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_USERNAME_SECRET` is specified, you should also specify `HTTP_PROXY_PASSWORD_SECRET`.                                                                                    |
+| `HTTP_PROXY_PASSWORD_SECRET`  |                          | Docker secrets that contain the credentials for accessing the HTTP proxy. If `HTTP_PROXY_PASSWORD_SECRET` is specified, you should also specify `HTTP_PROXY_USERNAME_SECRET`.                                                                                    |
+| `SOCKS_PROXY`                 |                          | Whether or not to enable the built-in SOCKS proxy server. To enable, set to any "truthy" value (see below the table). Any other value (including unset) will cause the proxy server to not run. It listens on port 1080.                                         |
+| `SOCKS_LISTEN_ON`             |                          | Address the proxies will be listening on. Set to `0.0.0.0` to listen on all IP addresses.                                                                                                                                                                        |
+| `SOCKS_PROXY_USERNAME`        |                          | Credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME` is specified, you should also specify `SOCKS_PROXY_PASSWORD`.                                                                                                                                   |
+| `SOCKS_PROXY_PASSWORD`        |                          | Credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD` is specified, you should also specify `SOCKS_PROXY_USERNAME`.                                                                                                                                   |
+| `SOCKS_PROXY_USERNAME_SECRET` |                          | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_USERNAME_SECRET` is specified, you should also specify `SOCKS_PROXY_PASSWORD_SECRET`.                                                                                     |
+| `SOCKS_PROXY_PASSWORD_SECRET` |                          | Docker secrets that contain the credentials for accessing the proxies. If `SOCKS_PROXY_PASSWORD_SECRET` is specified, you should also specify `SOCKS_PROXY_USERNAME_SECRET`.                                                                                     |
+| `RETRY`                       | `5`                      | Seconds to wait between connection attempts - see `openvpn`, first argument to `--connect-retry`.                                                                                                                                                                |
+| `MAX_RETRY`                   | `60`                     | Repeated reconnection attempts are slowed down after 5 retries per remote by doubling the wait time after each unsuccessful attempt.  The script caps at `60` - see `openvpn`, second argument to `--connect-retry`.                                             |
+| `SERVER_POLL`                 | `120`                    | When connecting to a remote server do not wait for more than n seconds for a response before trying the next server - see `openvpn`, `--server-poll-timeout`.                                                                                                    |
+| `PING`                        | `15`                     | Ping remote over the TCP/UDP control channel if no packets have been sent for at least n seconds - see `openvpn`, `--ping`                                                                                                                                       |
+| `PING_RESTART`                | `120`                    | Similar to --ping-exit, but trigger a SIGUSR1 restart after n seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                           |
+| `TAP`                         | `eth0`                   | Use this option to remap the script's `eth0` device.                                                                                                                                                                                                             |
+| `USE_FAST_IO`                 |                          | (Experimental) Optimize TUN/TAP/UDP I/O writes - see `openvpn`, `--fast-io`.                                                                                                                                                                                     |
+| `SNDBUF`                      |                          | Set the TCP/UDP socket send buffer size - see `openvpn`, `--sndbuf`.                                                                                                                                                                                             |
+| `RCVBUF`                      |                          | Set the TCP/UDP socket receive buffer size - see `openvpn`, `--rcvbuf`.                                                                                                                                                                                          |
+| `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve the file.  Use this option to have it saved in your VPN directory.  It is named `openvpn.XXXXXXXX.conf`.                                                |
+|                               |                          |                                                                                                                                                                                                                                                                  |
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
@@ -122,12 +154,37 @@ ports:
 In both cases, replace `<host_port>` and `<container_port>` with the port used by your connected container.
 
 ### Verifying functionality
-Once you have container running `ghcr.io/wfg/openvpn-client`, run the following command to spin up a temporary container using `openvpn-client` for networking.
-The `wget -qO - ifconfig.me` bit will return the public IP of the container (and anything else using `openvpn-client` for networking).
-You should see an IP address owned by your VPN provider.
+Once you have container running `ghcr.io/wfg/openvpn-client`, run the
+following command to spin up a temporary `alpine` container using
+`openvpn-client` for networking. The `wget -qO - ifconfig.me` bit will
+return the public IP of the container (and anything else using
+`openvpn-client` for networking). You should see an IP address owned by
+your VPN provider.
 ```bash
 docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfig.me
 ```
+
+### Performance tuning
+The following parameters may provide some performance benefits:
+
+* `USE_FAST_IO`
+* `SNDBUF`
+* `RCVBUF`
+
+In general, run several tests with one tune set.
+
+### Tips
+
+* Use `--tz "local"` so the container is in the same timezone as the
+  host.
+* To reduce the downtime between VPN drops, you might consider changing
+  some of the timeout parameters:
+  * `--env RETRY="2"`
+  * `--env MAX_RETRY="10"`
+  * `--env SERVER_POLL="5"`
+  * `--env PING="2"`
+  * `--env PING_RESTART="10"`
+  * `--env DIG_TIMEOUT="2"`
 
 ### Troubleshooting
 #### `can't initialize iptables`
@@ -138,8 +195,12 @@ Perhaps iptables or your kernel needs to be upgraded.
 ```
 
 #### VPN authentication
-Your OpenVPN configuration file may not come with authentication baked in.
-To provide OpenVPN the necessary credentials, create a file (any name will work, but this example will use `credentials.txt`) next to the OpenVPN configuration file with your username on the first line and your password on the second line.
+Your OpenVPN configuration file may not come with authentication baked
+in.  Below are two methods to provide the information.
+
+In both cases, create a file (any name will work, but this example will use
+`credentials.txt`) next to the OpenVPN configuration file with your
+username on the first line and your password on the second line.
 
 For example:
 ```
@@ -147,9 +208,23 @@ vpn_username
 vpn_password
 ```
 
+Change the permissions so only your user has read/write permissions:
+```shell
+$ chmod 600 credentials.txt
+```
+
+##### Method 1 
+`run` the container with the following additional parameters:
+```
+  --env VPN_AUTH_SECRET="credentials.txt" \
+  --volume <path/to/config/dir>:/run/secrets" \
+```
+
+##### Method 2
 In the OpenVPN configuration file, add the following line:
 ```
 auth-user-pass credentials.txt
 ```
 
-This will tell OpenVPN to read `credentials.txt` whenever it needs credentials.
+This will tell OpenVPN to read `credentials.txt` whenever it needs
+credentials.
