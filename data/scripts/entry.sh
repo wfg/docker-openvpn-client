@@ -46,6 +46,7 @@ dump_user_settings() {
    log_msg "Server poll timeout (--server-poll-timeout): ${SERVER_POLL:-120}"
    log_msg "Ping (--ping): ${PING:-15}"
    log_msg "Ping restart (--ping-restart): ${PING_RESTART:-120}"
+   log_msg "When kill switch enabled, dig timeout:  ${DIG_TIMEOUT:-5}"
    log_msg "Using OpenVPN log level: $VPN_LOG_LEVEL"
    if [[ -n "$TAP" ]] ; then
       log_msg "Container script 'eth0' remapped to '${TAP}'"
