@@ -107,7 +107,7 @@ services:
 | `USE_FAST_IO`                 |                          | (Experimental) Optimize TUN/TAP/UDP I/O writes - see `openvpn`, `--fast-io`.                                                                                                                                                                                     |
 | `SNDBUF`                      |                          | Set the TCP/UDP socket send buffer size - see `openvpn`, `--sndbuf`.                                                                                                                                                                                             |
 | `RCVBUF`                      |                          | Set the TCP/UDP socket receive buffer size - see `openvpn`, `--rcvbuf`.                                                                                                                                                                                          |
-| `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve this file.  The option saves the modified file in your VPN directory.  It is named `openvpn.XXXXXXXX.conf`.                                             |
+| `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve this file.  When the option is enabled, the modified file is created in your VPN directory with the name-pattern `openvpn.XXXXXXXX.conf`.               |
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
 ##### Environment variable considerations
