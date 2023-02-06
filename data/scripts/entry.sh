@@ -157,7 +157,7 @@ setup_kill_switch() {
                      iptables -A OUTPUT -o "${TAP:-eth0}" -d "$ip" -p "$protocol" --dport "$port" -j ACCEPT
                      printf "%s %s\n" "$ip" "$address" >> /etc/hosts
                   else
-                     log_msg "dig returned malformed IP ($IP).  Cannot recover. Bye."
+                     log_msg "dig returned malformed IP ($ip).  Cannot recover. Bye."
                      exit 1
                   fi
                done
@@ -204,7 +204,7 @@ setup_kill_switch() {
          fi
 
          global_port=$(grep "^port " "$modified_config_file" | awk '{print $2}')
-         global_protocol=$(grep "^proto " "$modified_config_file" | awk '{print $2}')  # {$2 = substr($2, 1, 3)} 2
+         global_protocol=$(grep "^proto " "$modified_config_file" | awk '{print $2}')
          remotes=$(grep "^remote " "$modified_config_file" | awk '{print $2, $3, $4}')
 
          printf '# allow traffic to the VPN server(s)\n' >> $nftables_config_file
