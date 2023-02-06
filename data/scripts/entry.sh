@@ -56,12 +56,6 @@ dump_user_settings() {
    if is_enabled "$USE_FAST_IO" ; then
       log_msg "Fast IO enabled (--fast-io), a non-Windows, UDP-only switch"
    fi
-   if [[ -n "$SNDBUF" ]] ; then
-      log_msg "Send buffer (--sndbuf): ${SNDBUF}"
-   fi
-   if [[ -n "$RCVBUF" ]] ; then
-      log_msg "Receive buffer (--sndbuf): ${RCVBUF}"
-   fi
 
    if is_enabled "$HTTP_PROXY"; then
       log_msg "HTTP proxy: $HTTP_PROXY"
@@ -313,18 +307,6 @@ openvpn_args=(
 if is_enabled "$USE_FAST_IO" ; then
    openvpn_args+=(
       "--fast-io"
-   )
-fi
-
-if [[ -n "$SNDBUF" ]] ; then
-   openvpn_args+=(
-      "--sndbuf" "${SNDBUF}"
-   )
-fi
-
-if [[ -n "$RCVBUF" ]] ; then
-   openvpn_args+=(
-      "--rcvbuf" "${RCVBUF}"
    )
 fi
 

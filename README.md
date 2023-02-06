@@ -105,8 +105,6 @@ services:
 | `PING_RESTART`                | `120`                    | Similar to `--ping-exit`, but trigger a `SIGUSR1` restart after `n` seconds pass without reception of a ping or other packet  from remote - see `openvpn`, `--ping-restart`.                                                                                     |
 | `TAP`                         | `eth0`                   | Use this option to remap the script's `eth0` device.                                                                                                                                                                                                             |
 | `USE_FAST_IO`                 |                          | (Experimental) Optimize TUN/TAP/UDP I/O writes - see `openvpn`, `--fast-io`.                                                                                                                                                                                     |
-| `SNDBUF`                      |                          | Set the TCP/UDP socket send buffer size - see `openvpn`, `--sndbuf`.                                                                                                                                                                                             |
-| `RCVBUF`                      |                          | Set the TCP/UDP socket receive buffer size - see `openvpn`, `--rcvbuf`.                                                                                                                                                                                          |
 | `DEBUG_VPN_CONFIG_FILE`       |                          | The container creates a modified version of the VPN file.  When debugging, it may be helpful to preserve this file.  When the option is enabled, the modified file is created in your VPN directory with the name-pattern `openvpn.XXXXXXXX.conf`.               |
 "Truthy" values are the following: `true`, `t`, `yes`, `y`, `1`, `on`, `enable`, or `enabled`.
 
@@ -162,14 +160,9 @@ docker run --rm -it --network=container:openvpn-client alpine wget -qO - ifconfi
 ```
 
 ### Performance tuning
-The following parameters may provide some performance benefits:
+The following parameter may provide some performance benefits:
 
-* `USE_FAST_IO`
-* `SNDBUF`
-* `RCVBUF`
-
-In general, run three tests in (near) isolation with one tune set before
-adding another.
+* `USE_FAST_IO` - non-Windows
 
 ### Tips
 
