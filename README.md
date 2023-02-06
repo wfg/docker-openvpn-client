@@ -23,7 +23,7 @@ docker pull ghcr.io/wfg/openvpn-client
 
 To build it yourself, run
 ```
-docker build -t ghcr.io/wfg/openvpn-client https://github.com/wfg/docker-openvpn-client.git#rewrite:build
+docker build -t ghcr.io/wfg/openvpn-client https://github.com/wfg/docker-openvpn-client.git#:build
 ```
 
 ### Creating and running a container
