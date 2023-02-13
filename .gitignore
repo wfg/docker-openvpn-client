@@ -1,1 +1,2 @@
-.local/
+# Anything used during development should be put in local/ to prevent accidental committing.
+local/
