@@ -34,6 +34,7 @@ openvpn_args=(
 )
 
 if is_enabled "$KILL_SWITCH"; then
+    openvpn_args+=("--script-security" "2")
     openvpn_args+=("--route-up" "/usr/local/bin/killswitch.sh $ALLOWED_SUBNETS")
 fi
 
