@@ -13,6 +13,11 @@ is_enabled() {
     [[ ${1,,} =~ ^(true|t|yes|y|1|on|enable|enabled)$ ]]
 }
 
+CONFIG_FILE=${CONFIG_FILE:=}
+KILL_SWITCH=${KILL_SWITCH:=on}
+ALLOWED_SUBNETS=${ALLOWED_SUBNETS:=}
+AUTH_SECRET=${AUTH_SECRET:=}
+
 # Either a specific file name or a pattern.
 if [[ $CONFIG_FILE ]]; then
     config_file=$(find /config -name "$CONFIG_FILE" 2> /dev/null | sort | shuf -n 1)
@@ -38,8 +43,13 @@ if is_enabled "$KILL_SWITCH"; then
 fi
 
 # Docker secret that contains the credentials for accessing the VPN.
+if [[ $AUTH_SECRET ]] && [ ! -f "$AUTH_SECRET" ]; then
+    echo "AUTH_SECRET file not found" >&2
+    exit 1
+fi
+
 if [[ $AUTH_SECRET ]]; then
-    openvpn_args+=("--auth-user-pass" "/run/secrets/$AUTH_SECRET")
+    openvpn_args+=("--auth-user-pass" "$AUTH_SECRET")
 fi
 
 openvpn "${openvpn_args[@]}" &
