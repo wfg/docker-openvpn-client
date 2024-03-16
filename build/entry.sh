@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
 cleanup() {
@@ -30,7 +29,7 @@ echo "using openvpn configuration file: $config_file"
 
 openvpn_args=(
     "--config" "$config_file"
-    "--cd" "/config"
+    "--cd" "/"
 )
 
 if is_enabled "$KILL_SWITCH"; then
@@ -40,6 +39,10 @@ fi
 # Docker secret that contains the credentials for accessing the VPN.
 if [[ $AUTH_SECRET ]]; then
     openvpn_args+=("--auth-user-pass" "/run/secrets/$AUTH_SECRET")
+elif [[ $AUTH_SECRET_FILE ]]; then
+
+openvpn_args+=("--auth-user-pass" "$AUTH_SECRET_FILE")
+
 fi
 
 openvpn "${openvpn_args[@]}" &
