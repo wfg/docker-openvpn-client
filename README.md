@@ -1,4 +1,7 @@
 # OpenVPN Client for Docker
+
+Archived in favor of [a WireGuard version](https://github.com/wfg/docker-wireguard).
+
 ## What is this and what does it do?
 [`ghcr.io/wfg/openvpn-client`](https://github.com/users/wfg/packages/container/package/openvpn-client) is a containerized OpenVPN client.
 It has a kill switch built with `iptables` that kills Internet connectivity to the container if the VPN tunnel goes down for any reason.
