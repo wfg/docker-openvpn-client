@@ -7,7 +7,8 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
-      - ALLOWED_SUBNETS=192.168.10.0/24
+      ALLOWED_SUBNETS: 192.168.10.0/24
+      AUTH_SECRET: /config/credentions.txt
     volumes:
       - ./local:/config
     restart: unless-stopped
